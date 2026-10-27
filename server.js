@@ -105,6 +105,8 @@ function parseFeed(xml) {
       body: stripHtml(rawBody).slice(0, 4000),
       image,
       author: stripHtml(tag(b, 'dc:creator') || tag(tag(b, 'author'), 'name') || ''),
+      views: Number(attr(b, 'media:statistics', 'views')) || 0,
+      likes: Number(attr(b, 'media:starRating', 'count')) || 0,
       cats,
     };
   }).filter((i) => i.title && i.url);
@@ -114,6 +116,25 @@ function parseFeed(xml) {
 const AI_RE = /\b(ai|a\.i\.|llms?|gpt[-\d\w.]*|chatgpt|openai|anthropic|claude|gemini|llama|mistral|qwen|deepseek|grok|copilot|agents?|agentic|mcp|rag|embedding|transformer|diffusion|neural|machine learning|ml|genai|generative|prompt|vibe[- ]?cod\w*|cursor|whisper|ollama|hugging ?face|model|inference|fine[- ]?tun\w*|voice clone|text[- ]to[- ]\w+)\b/i;
 
 const TR_AI_RE = /(yapay zek|chatgpt|gemini|claude|openai|copilot|robot)/i;
+
+// Videolar: Shorts hariç, yalnızca gerçekten izlenen ve beğenilenler.
+// Eşik videonun yaşıyla ölçeklenir (yeni bir video henüz izlenme toplamamış olabilir).
+const MIN_VIEWS = { en: 30000, tr: 15000 };
+function popularVideos(items, src) {
+  const base = MIN_VIEWS[src.lang] || MIN_VIEWS.en;
+  return items
+    .filter((i) => !i.url.includes('/shorts/') && !/#shorts?\b/i.test(i.title + ' ' + i.summary))
+    .filter((i) => {
+      const ageH = (Date.now() - i.date) / 3600000;
+      return ageH < 14 * 24 && i.views >= base * Math.min(1, Math.max(0.4, ageH / 72));
+    })
+    .sort((a, b) => b.views - a.views)
+    .map((i) => ({
+      ...i,
+      metric: `${fmtNum(i.views)} izlenme · ${fmtNum(i.likes)} beğeni`,
+      engage: i.views / 150000 + i.likes / 8000,
+    }));
+}
 
 const fetchers = {
   async rss(src) {
@@ -133,6 +154,7 @@ const fetchers = {
         return { ...i, title: m ? m[1] : i.title, author: m ? m[2] : '', summary: '', metric: m ? m[2] : '' };
       });
     }
+    if (src.url.includes('youtube.com/feeds')) items = popularVideos(items, src);
     return items.slice(0, src.limit || 20);
   },
 
@@ -437,8 +459,8 @@ async function fetchLeaderboards() {
 }
 
 function fmtNum(n) {
-  if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.0', '') + 'M';
-  if (n >= 1e3) return (n / 1e3).toFixed(1).replace('.0', '') + 'B';
+  if (n >= 1e6) return (n / 1e6).toFixed(1).replace('.0', '').replace('.', ',') + ' mn';
+  if (n >= 1e3) return (n / 1e3).toFixed(1).replace('.0', '').replace('.', ',') + ' bin';
   return String(n);
 }
 
@@ -586,7 +608,16 @@ function buildPayload() {
   const trCache = state.tr.tr || {};
   for (const it of items) {
     delete it.body;
-    if (state.details?.[it.id]) it.aid = createDetails.aidOf(it.id);
+    const det = state.details?.[it.id];
+    if (det) {
+      it.aid = createDetails.aidOf(it.id);
+      if (!it.image && det.image) it.image = det.image;
+      // Uygulama ve fikir kartlarında "ne işe yarar" açıklaması gösterilir
+      if (['apps', 'ideas'].includes(it.cat)) {
+        const ex = (it.lang !== 'tr' && det.tr?.lead) || det.lead;
+        if (ex && ex !== it.summary) it.ex = clip(ex, 240);
+      }
+    }
     const t = !ID_TITLE_SOURCES.has(it.sourceId) && trCache[hashText(it.title)], s = it.summary && trCache[hashText(it.summary)];
     if ((t && t !== '=') || (s && s !== '=')) it.i18n = { tr: { t: t && t !== '=' ? fixup(t) : undefined, s: s && s !== '=' ? fixup(s) : undefined } };
   }

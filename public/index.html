@@ -36,10 +36,12 @@
   </header>
 
   <section class="hero" id="hero">
-    <canvas id="globe" aria-hidden="true"></canvas>
+    <canvas id="globe" aria-label="Kategoriler küresi: sürükleyerek döndür, uydulara tıklayarak kategoriye git"></canvas>
+    <div class="globe-tip" id="globeTip" hidden></div>
     <div class="hero-copy">
       <h1>Yapay zekada <span class="grad">bugün</span></h1>
       <p class="sub" id="sub">Yükleniyor…</p>
+      <p class="hint">Küreyi sürükle · uydulara tıklayıp kategoriye git</p>
     </div>
   </section>
 
@@ -63,7 +65,6 @@
           <button data-vlang="en">Yabancı</button>
         </div>
       </div>
-      <div id="brief"></div>
       <div id="feed" class="feed"></div>
       <button id="more" class="more" hidden>Daha fazla göster</button>
       <div id="page" hidden></div>
@@ -80,8 +81,7 @@
       </div>
       <div class="panel lab">
         <div class="panel-head">
-          <h3>Fikir Laboratuvarı</h3>
-          <button class="link-btn" id="labShuffle">Başka fikir</button>
+          <h3>💡 Fikir Laboratuvarı</h3>
         </div>
         <div id="labBody"></div>
       </div>

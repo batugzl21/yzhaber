@@ -10,7 +10,7 @@ const TABS = [
   { id: 'tr', name: 'Türkçe', color: 'var(--c-tr)' },
 ];
 const CAT_NAME = { models: 'Modeller', news: 'Haber', community: 'Topluluk', apps: 'Uygulama', ideas: 'Fikir', learn: 'Öğren', research: 'Araştırma', video: 'Video', tr: 'Türkçe' };
-const PAGE = 24;
+const PAGE = 30;
 
 const store = {
   get(k, d) { try { return JSON.parse(localStorage.getItem('yzr.' + k)) ?? d; } catch { return d; } },
@@ -20,7 +20,7 @@ const store = {
 const S = {
   data: null,
   static: location.hostname.endsWith('github.io'), // bulutta sunucu yok, doğrudan data/news.json okunur
-  view: 'feed', // feed | saved | guide
+  view: 'feed', // feed | lab | saved | guide
   tab: store.get('tab', 'all'),
   range: store.get('range', 72),
   sort: store.get('sort', 'hot'),
@@ -30,15 +30,15 @@ const S = {
   q: '',
   limit: PAGE,
   saved: store.get('saved', {}),
+  ideas: store.get('ideas', {}),
   read: new Set(store.get('read', [])),
   lastVisit: store.get('lastVisit', Date.now() - 6 * 3600000),
-  labIdx: 0,
-  labItem: null,
+  lab: { niche: '', form: '', salt: 0 },
   details: new Map(),
   openKey: null,
+  prompts: {},
 };
 if (!TABS.some((t) => t.id === S.tab)) S.tab = 'all';
-// "Ziyaret": 30 dk'dan uzun aradan sonra açılış
 const lastSeen = store.get('lastSeen', 0);
 if (lastSeen && Date.now() - lastSeen > 30 * 60000) {
   S.lastVisit = lastSeen;
@@ -66,6 +66,7 @@ function toast(msg) {
   toast.t = setTimeout(() => el.classList.remove('show'), 2400);
 }
 const hostOf = (u) => { try { return new URL(u).host.replace(/^www\./, ''); } catch { return u; } };
+const tabOf = (it) => TABS.find((t) => (t.cats || [t.id]).includes(it.cat)) || TABS[0];
 
 // ─── Çeviri ─────────────────────────────────────────────────────────────
 // Türkçe çeviriler sunucudan hazır gelir. Diğer diller tarayıcıda, Google Çeviri'nin
@@ -101,6 +102,7 @@ function tx(text, pre, from) {
 }
 function tr1(it, field) {
   if (field === 'title' && ID_TITLE.has(it.sourceId)) return it.title;
+  if (field === 'ex') return it.ex ? tx(it.ex, undefined, 'tr') : ''; // açıklama sunucuda zaten Türkçe
   const pre = it.i18n ? it.i18n.tr?.[field === 'title' ? 't' : 's'] ?? null : undefined;
   return tx(it[field], pre, srcLang(it));
 }
@@ -135,7 +137,7 @@ async function runTx() {
   if (lang === S.lang) {
     const y = scrollY;
     renderMain();
-    renderLab();
+    renderLabTeaser();
     if (S.openKey) renderDetail();
     scrollTo(0, y);
   }
@@ -152,7 +154,7 @@ async function load(silent) {
         if (!res.ok) throw new Error(res.status);
         data = await res.json();
       } catch {
-        S.static = true; // sunucu yok → statik barındırma (GitHub Pages)
+        S.static = true;
       }
     }
     if (S.static) data = await fetch('data/news.json?t=' + Date.now(), { cache: 'no-store' }).then((r) => r.json());
@@ -179,7 +181,7 @@ function itemsForTab() {
   let items = S.data.items;
   if (S.tab !== 'all') items = items.filter((i) => (tab.cats || [tab.id]).includes(i.cat));
   if (S.range) items = items.filter((i) => Date.now() - i.date < S.range * 3600000);
-  if (S.vlang && ['video', 'all', 'learn'].includes(S.tab)) items = items.filter((i) => (srcLang(i) === 'tr') === (S.vlang === 'tr'));
+  if (S.vlang && ['video', 'learn'].includes(S.tab)) items = items.filter((i) => (srcLang(i) === 'tr') === (S.vlang === 'tr'));
   if (S.q) {
     const words = S.q.toLocaleLowerCase('tr').split(/\s+/).filter(Boolean);
     items = S.data.items.filter((i) => {
@@ -196,7 +198,14 @@ function renderAll() {
   renderTabs();
   renderMain();
   renderBoard();
-  renderLab();
+  renderLabTeaser();
+  // Küredeki uydulara kategori adlarını ve bugünkü haber sayılarını ver
+  const labels = {};
+  for (const t of TABS.slice(1)) {
+    const cats = t.cats || [t.id];
+    labels[t.id] = { name: t.name, count: S.data.items.filter((i) => cats.includes(i.cat) && Date.now() - i.date < 86400000).length };
+  }
+  window.Globe?.setLabels(labels);
 }
 
 function renderSub() {
@@ -209,21 +218,72 @@ function renderSub() {
 
 function renderTabs() {
   $('#tabs').innerHTML = TABS.map((t) =>
-    `<button class="tab ${S.view === 'feed' && S.tab === t.id ? 'on' : ''}" data-tab="${t.id}" style="--tc:${t.color}">${t.name}</button>`).join('');
-  document.querySelectorAll('[data-view]').forEach((b) => b.classList.toggle('on', S.view === b.dataset.view));
+    `<button class="tab ${S.view === 'feed' && S.tab === t.id ? 'on' : ''}" data-tab="${t.id}" style="--tc:${t.color}">${t.name}</button>`).join('') +
+    `<button class="tab tab-lab ${S.view === 'lab' ? 'on' : ''}" data-view="lab">💡 Fikir Lab</button>`;
+  document.querySelectorAll('.icon-btn[data-view]').forEach((b) => b.classList.toggle('on', S.view === b.dataset.view));
 }
 
-function cardHTML(it) {
-  const isNew = it.date > S.lastVisit && it.dated !== false;
-  const thumb = it.cat === 'video' && it.image ? `<img class="thumb" src="${esc(it.image)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()">` : '';
-  const summary = it.cat === 'video' ? '' : tr1(it, 'summary');
+const metaLine = (it) => `<span class="src">${esc(it.source)}</span><span>· ${it.dated === false ? 'bugün' : ago(it.date)}</span>`;
+const isNew = (it) => it.date > S.lastVisit && it.dated !== false;
+const imgTag = (src, cls) => `<img class="${cls}" src="${esc(src)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.closest('[data-img]')?.classList.add('noimg');this.remove()">`;
+
+// Görselli manşet kartları (öne çıkanlar)
+function heroCards(items) {
+  if (!items.length) return '';
+  const [big, ...rest] = items;
   return `
-  <article class="card ${S.read.has(it.id) ? 'read' : ''}" data-cat="${it.cat}" data-open="${esc(it.key)}" tabindex="0" role="link">
-    ${thumb}
-    <div class="meta">${isNew ? '<span class="new" title="Yeni"></span>' : ''}<span class="src">${esc(it.source)}</span><span>· ${it.dated === false ? 'bugün' : ago(it.date)}</span></div>
-    <h3 class="title">${esc(tr1(it, 'title'))}</h3>
-    ${summary ? `<p class="summary">${esc(summary)}</p>` : ''}
+  <section class="mast">
+    <article class="mast-big" data-open="${esc(big.key)}" data-cat="${big.cat}" data-img tabindex="0" role="link">
+      ${imgTag(big.image, 'mast-img')}
+      <div class="mast-over">
+        <span class="chip">${CAT_NAME[big.cat] || ''}</span>
+        <h2>${esc(tr1(big, 'title'))}</h2>
+        <div class="meta">${metaLine(big)}</div>
+      </div>
+    </article>
+    <div class="mast-side">${rest.map((it) => `
+      <article class="mast-small" data-open="${esc(it.key)}" data-cat="${it.cat}" data-img tabindex="0" role="link">
+        ${imgTag(it.image, 'ms-img')}
+        <div><span class="chip">${CAT_NAME[it.cat] || ''}</span><h3>${esc(tr1(it, 'title'))}</h3><div class="meta">${metaLine(it)}</div></div>
+      </article>`).join('')}
+    </div>
+  </section>`;
+}
+
+// Sade başlık satırı
+const headline = (it) => `
+  <li class="hl ${S.read.has(it.id) ? 'read' : ''}" data-open="${esc(it.key)}" data-cat="${it.cat}" tabindex="0" role="link">
+    <span class="hl-cat">${S.tab === 'all' ? CAT_NAME[it.cat] || '' : ''}</span>
+    <span class="hl-t">${isNew(it) ? '<i class="new"></i>' : ''}${esc(tr1(it, 'title'))}</span>
+    <span class="hl-m">${esc(it.source)} · ${it.dated === false ? 'bugün' : ago(it.date)}</span>
+  </li>`;
+
+const videoCard = (it) => `
+  <article class="vcard" data-open="${esc(it.key)}" tabindex="0" role="link">
+    <div class="vthumb">${it.image ? imgTag(it.image, '') : ''}<span class="play">▶</span></div>
+    <h3>${esc(tr1(it, 'title'))}</h3>
+    <div class="vmeta"><b>${esc(it.source)}</b> · ${esc(it.metric || '')} · ${ago(it.date)}</div>
   </article>`;
+
+const appCard = (it) => `
+  <article class="acard" data-open="${esc(it.key)}" data-cat="${it.cat}" tabindex="0" role="link">
+    <div class="meta">${metaLine(it)}${it.metric ? `<span class="am">${esc(it.metric.split(' · ')[0])}</span>` : ''}</div>
+    <h3>${esc(appName(it))}</h3>
+    <p>${esc(tr1(it, 'ex') || tr1(it, 'summary') || '')}</p>
+    <button class="link-btn" data-idea="${esc(it.key)}">💡 Bundan fikir üret →</button>
+  </article>`;
+
+// Manşet için: görseli olan, farklı kategori ve kaynaklardan en önemli haberler
+function pickFeatured(items, n) {
+  const out = [], src = new Set(), cats = {};
+  for (const it of items) {
+    if (!it.image || it.dated === false || it.cat === 'video' || src.has(it.sourceId) || (cats[it.cat] || 0) >= 2) continue;
+    out.push(it);
+    src.add(it.sourceId);
+    cats[it.cat] = (cats[it.cat] || 0) + 1;
+    if (out.length === n) break;
+  }
+  return out;
 }
 
 function renderMain() {
@@ -231,22 +291,12 @@ function renderMain() {
   const feedView = S.view === 'feed';
   $('.layout').classList.toggle('wide', !feedView);
   $('#controls').hidden = !feedView;
-  $('#feed').hidden = !feedView && S.view !== 'saved';
+  $('#feed').hidden = !feedView;
   $('#page').hidden = feedView;
-  $('#brief').innerHTML = '';
   $('#more').hidden = true;
-
-  if (S.view === 'guide') {
-    $('#feed').hidden = true;
-    return renderGuide();
-  }
-  if (S.view === 'saved') {
-    const list = Object.values(S.saved).sort((a, b) => b.savedAt - a.savedAt);
-    $('#page').innerHTML = `<div class="page-head"><h2>Kaydedilenler</h2><p>${list.length ? `${list.length} haber` : 'Bir haberin sayfasındaki “Kaydet” ile buraya ekleyebilirsin.'}</p></div>`;
-    $('#feed').hidden = !list.length;
-    $('#feed').innerHTML = list.map(cardHTML).join('');
-    return;
-  }
+  if (S.view === 'guide') return renderGuide();
+  if (S.view === 'saved') return renderSaved();
+  if (S.view === 'lab') return renderLab();
 
   document.querySelectorAll('#range button').forEach((b) => b.classList.toggle('on', Number(b.dataset.range) === S.range));
   document.querySelectorAll('#sort button').forEach((b) => b.classList.toggle('on', b.dataset.sort === S.sort));
@@ -254,41 +304,38 @@ function renderMain() {
   $('#vlang').hidden = !['video', 'learn'].includes(S.tab);
 
   let items = itemsForTab();
-  if (S.tab === 'all' && !S.q) {
-    const brief = renderBrief();
-    items = items.filter((i) => !brief.has(i.id));
+  let html = '';
+  if (!items.length) {
+    $('#feed').innerHTML = `<div class="empty">${S.q ? 'Aramana uygun haber bulunamadı.' : 'Bu aralıkta haber yok. “Hafta”yı seçmeyi dene.'}</div>`;
+    return;
   }
-  const page = items.slice(0, S.limit);
-  $('#feed').innerHTML = (S.tab === 'all' && !S.q ? '<h2 class="section-title" style="grid-column:1/-1;margin-bottom:0">Diğer haberler</h2>' : '') +
-    (page.length ? page.map(cardHTML).join('') : `<div class="empty">${S.q ? 'Aramana uygun haber bulunamadı.' : 'Bu aralıkta haber yok. “Hafta”yı seçmeyi dene.'}</div>`);
+  if (S.tab === 'video' && !S.q) {
+    const page = items.slice(0, S.limit);
+    html = `<div class="vgrid">${page.map(videoCard).join('')}</div>`;
+  } else if (S.tab === 'apps' && !S.q) {
+    const page = items.slice(0, S.limit);
+    html = `<p class="lede">Son günlerde çıkan ve ilgi gören yapay zeka uygulamaları ve açık kaynak projeler. Bir karta tıklayınca ne işe yaradığını ayrıntılı görürsün.</p><div class="agrid">${page.map(appCard).join('')}</div>`;
+  } else {
+    if (!S.q && S.sort === 'hot') {
+      const feat = pickFeatured(items, S.tab === 'all' ? 5 : 3);
+      const ids = new Set(feat.map((f) => f.id));
+      items = items.filter((i) => !ids.has(i.id));
+      html += heroCards(feat);
+    }
+    const page = items.slice(0, S.limit);
+    html += `<h2 class="section-title">${S.q ? 'Arama sonuçları' : S.tab === 'all' ? 'Diğer haberler' : 'Tüm başlıklar'}</h2><ul class="hlist">${page.map(headline).join('')}</ul>`;
+  }
+  $('#feed').innerHTML = html;
   $('#more').hidden = items.length <= S.limit;
 }
 
-// Gündem sekmesinin başı: her kategoriden son 24 saatin en önemli haberi
-function renderBrief() {
-  const used = new Set();
-  const rows = [];
-  for (const t of TABS.slice(1)) {
-    const cats = t.cats || [t.id];
-    const pool = S.data.items.filter((i) => cats.includes(i.cat) && i.dated !== false);
-    const best = pool.filter((i) => Date.now() - i.date < 86400000).sort((a, b) => b.hot - a.hot)[0]
-      || pool.filter((i) => Date.now() - i.date < 3 * 86400000).sort((a, b) => b.hot - a.hot)[0];
-    if (best) {
-      rows.push([t, best]);
-      used.add(best.id);
-    }
-  }
-  $('#brief').innerHTML = `
-    <section class="brief">
-      <h2>Günün özeti · ${new Date().toLocaleDateString('tr-TR', { day: 'numeric', month: 'long' })}</h2>
-      <ol class="brief-list">${rows.map(([t, it]) => `
-        <li><button data-open="${esc(it.key)}" style="--cc:${t.color}">
-          <span class="cat">${t.name}</span>
-          <span class="t">${esc(tr1(it, 'title'))}<span class="s">${esc(it.source)} · ${ago(it.date)}</span></span>
-        </button></li>`).join('')}
-      </ol>
-    </section>`;
-  return used;
+function renderSaved() {
+  const list = Object.values(S.saved).sort((a, b) => b.savedAt - a.savedAt);
+  const ideas = Object.values(S.ideas).sort((a, b) => b.at - a.at);
+  $('#page').innerHTML = `
+    <div class="page-head"><h2>Kaydedilenler</h2><p>${list.length || ideas.length ? '' : 'Bir haberin sayfasındaki “Kaydet” ya da Fikir Lab’deki ☆ ile buraya ekleyebilirsin.'}</p></div>
+    ${ideas.length ? `<h2 class="section-title">Fikirler</h2><ul class="hlist">${ideas.map((i) => `<li class="hl" data-copy-text="${esc(i.prompt)}"><span class="hl-cat">Fikir</span><span class="hl-t">${esc(i.title)}</span><span class="hl-m">prompt'u kopyala</span></li>`).join('')}</ul>` : ''}
+    ${list.length ? `<h2 class="section-title">Haberler</h2><ul class="hlist">${list.map(headline).join('')}</ul>` : ''}`;
 }
 
 function renderGuide() {
@@ -298,12 +345,12 @@ function renderGuide() {
   const mk = (tr) => ch.filter((s) => (s.lang === 'tr') === tr).map((s) => ({ id: s.id, name: s.name + (s.topic ? ` · ${s.topic}` : ''), url: `https://www.youtube.com/@${s.handle}`, why: s.why || '' }));
   const sections = [
     ...window.GUIDE,
-    { title: 'YouTube · Türkçe kanallar', desc: 'Her kanal canlı doğrulandı. Son videolar “Videolar” sekmesinde.', items: mk(true) },
-    { title: 'YouTube · Yabancı kanallar', desc: 'Haber, araç, yapım, araştırma ve röportaj kanalları.', items: mk(false) },
+    { title: 'YouTube · Yabancı kanallar', desc: 'Yalnızca çok izlenen videolar alınır, Shorts alınmaz.', items: mk(false) },
+    { title: 'YouTube · Türkçe kanallar', desc: 'Türkçe videolar için daha yüksek izlenme eşiği uygulanır.', items: mk(true) },
   ];
   $('#page').innerHTML = `
     <div class="page-head"><h2>Kaynak rehberi</h2>
-    <p>Haberler nereden geliyor, neyi neden takip etmelisin? Şu an ${ok}/${S.data.sources.length} kaynak sorunsuz çalışıyor. <span class="glist"><span class="st ok"></span></span>çalışıyor · <span class="glist"><span class="st bad"></span></span>son denemede hata</p></div>` +
+    <p>Haberler nereden geliyor, neyi neden takip etmelisin? Şu an ${ok}/${S.data.sources.length} kaynak sorunsuz çalışıyor.</p></div>` +
     sections.map((sec, i) => `
     <details class="gsec" ${i === 0 ? 'open' : ''}>
       <summary><h3>${esc(sec.title)}</h3><span>${sec.items.length}</span></summary>
@@ -330,30 +377,147 @@ function renderBoard() {
 }
 
 // ─── Fikir Laboratuvarı ─────────────────────────────────────────────────
-const NICHES = ['diş klinikleri', 'emlak danışmanları', 'YKS/LGS öğrencileri', 'kafe ve restoranlar', 'mali müşavirler', 'içerik üreticileri', 'avukatlar', 'spor salonları', 'veteriner klinikleri', 'mahalle esnafı', 'e-ticaret satıcıları', 'freelance tasarımcılar', 'öğretmenler', 'küçük oteller', 'İK ekipleri', 'güzellik salonları'];
-const FORMS = ['WhatsApp botu', 'Chrome eklentisi', 'Telegram botu', 'web uygulaması', 'mobil uygulama', 'Claude skill’i / MCP sunucusu', 'masaüstü uygulaması', 'Türkçe sesli asistan'];
-const MODELS = ['aylık abonelik', 'ücretsiz + premium', 'kullanım başına kredi', 'tek seferlik lisans', 'ajanslara beyaz etiket'];
-const pick = (arr, seed) => arr[Math.abs(seed) % arr.length];
+// Trend uygulamalardan Türkiye'ye uyarlanabilir ürün fikirleri. Niş ve biçim, ilham alınan
+// projenin konusuna göre seçilir; kullanıcı ikisini de elle değiştirebilir.
+const NICHES = [
+  { id: 'esnaf', name: 'mahalle esnafı ve küçük işletmeler', re: /shop|store|retail|pos|inventory|small business/i, price: '99–249 ₺/ay' },
+  { id: 'eticaret', name: 'e-ticaret satıcıları (Trendyol, Hepsiburada)', re: /e-?commerce|seller|product|listing|shopify|amazon|marketing|ads?\b|seo/i, price: '249–749 ₺/ay' },
+  { id: 'ogrenci', name: 'YKS/LGS öğrencileri', re: /learn|study|student|tutor|education|exam|quiz|course|flashcard/i, price: '79–149 ₺/ay' },
+  { id: 'ogretmen', name: 'öğretmenler', re: /teach|classroom|lesson|grading|school/i, price: '99–199 ₺/ay' },
+  { id: 'klinik', name: 'diş ve sağlık klinikleri', re: /health|medical|clinic|patient|doctor|appointment|therapy/i, price: '499–1.499 ₺/ay' },
+  { id: 'avukat', name: 'avukatlar ve hukuk büroları', re: /legal|law|contract|compliance|document review/i, price: '749–1.999 ₺/ay' },
+  { id: 'muhasebe', name: 'mali müşavirler', re: /invoice|account|tax|finance|bookkeep|receipt|expense/i, price: '499–1.499 ₺/ay' },
+  { id: 'emlak', name: 'emlak danışmanları', re: /real estate|property|listing|crm|lead/i, price: '299–899 ₺/ay' },
+  { id: 'icerik', name: 'YouTuber ve içerik üreticileri', re: /video|youtube|content|creator|thumbnail|caption|podcast|social|tiktok|edit/i, price: '149–449 ₺/ay' },
+  { id: 'restoran', name: 'kafe ve restoranlar', re: /restaurant|food|menu|order|delivery|cafe/i, price: '199–599 ₺/ay' },
+  { id: 'ik', name: 'İK ekipleri ve iş arayanlar', re: /hr\b|hiring|recruit|resume|cv\b|interview|job/i, price: '299–999 ₺/ay' },
+  { id: 'tasarimci', name: 'freelance tasarımcılar', re: /design|figma|ui\b|ux\b|logo|image|brand/i, price: '149–399 ₺/ay' },
+  { id: 'yazilimci', name: 'yazılımcılar ve ajanslar', re: /code|coding|developer|github|api|agent|cli|devtool|mcp|claude code|cursor/i, price: '199–599 ₺/ay' },
+  { id: 'otel', name: 'butik oteller ve pansiyonlar', re: /travel|hotel|booking|tourism|trip/i, price: '399–999 ₺/ay' },
+];
+const FORMS = [
+  { id: 'whatsapp', name: 'WhatsApp asistanı', re: /chat|assistant|support|customer|agent|bot|message/i, diff: 1, time: '1 hafta sonu',
+    stack: 'WhatsApp Cloud API · Claude API · Supabase',
+    mvp: ['Meta Business hesabı aç, WhatsApp Cloud API ile mesaj alıp gönder', 'Claude ile tek bir işi çok iyi yapan akışı kur (randevu, sipariş, soru-cevap)', 'Konuşmaları Supabase’e kaydet, 5 işletmeyle ücretsiz dene', 'İşe yarayınca aylık ücrete geç'] },
+  { id: 'web', name: 'web uygulaması (SaaS)', re: /dashboard|platform|saas|tool|analytics|generator|editor/i, diff: 2, time: '2–3 hafta sonu',
+    stack: 'Next.js · Supabase (giriş + veritabanı) · iyzico/Stripe · Claude API',
+    mvp: ['Tek sayfalık açılış sayfası yaz, bekleme listesi topla', 'Ana özelliği tek ekranda çalışır hale getir', 'Giriş ve ödeme ekle (iyzico)', 'Bekleme listesindekilere erken erişim ver'] },
+  { id: 'chrome', name: 'Chrome eklentisi', re: /browser|extension|chrome|web page|tab|read/i, diff: 1, time: '1–2 hafta sonu',
+    stack: 'Chrome Manifest V3 · Claude API (kendi sunucun üzerinden) · Plasmo',
+    mvp: ['Eklentinin tek bir sayfada tek bir işi yapmasını sağla', 'API anahtarını küçük bir sunucuda sakla', 'Chrome Web Store’a yükle', 'Ücretsiz kotadan sonra premium iste'] },
+  { id: 'mobile', name: 'mobil uygulama', re: /mobile|ios|android|app\b|camera|photo|voice|habit/i, diff: 3, time: '3–4 hafta sonu',
+    stack: 'Expo (React Native) · Supabase · RevenueCat · Claude API',
+    mvp: ['Expo ile tek ana ekranı çıkar', 'Supabase ile giriş ve veri sakla', 'TestFlight / dahili test ile 10 kişiye dağıt', 'RevenueCat ile abonelik ekle'] },
+  { id: 'telegram', name: 'Telegram botu', re: /notify|alert|monitor|digest|summar/i, diff: 1, time: '1 hafta sonu',
+    stack: 'Telegram Bot API · Claude API · Cloudflare Workers',
+    mvp: ['BotFather ile bot aç', 'Tek komutla çalışan ana özelliği yaz', 'Kullanıcı başına günlük kota koy', 'Telegram Stars ile ücretli plan ekle'] },
+  { id: 'mcp', name: 'Claude skill’i / MCP sunucusu', re: /mcp|skill|plugin|claude|integration|connector/i, diff: 1, time: '1 hafta sonu',
+    stack: 'MCP TypeScript SDK · npm · Claude Desktop / Claude Code',
+    mvp: ['Türk bir servisin (ör. e-Fatura, TCMB, Trendyol) API’sini MCP aracına çevir', 'Claude Desktop’ta dene', 'GitHub’da yayınla, awesome-mcp listelerine ekle', 'Kurumsal sürüm için destek paketi sat'] },
+  { id: 'voice', name: 'Türkçe sesli asistan', re: /voice|speech|audio|call|phone|transcri/i, diff: 2, time: '2 hafta sonu',
+    stack: 'Whisper / ElevenLabs · Claude API · Twilio (telefon)',
+    mvp: ['Türkçe konuşmayı yazıya çevir', 'Claude ile yanıt üret, sese çevir', 'Tek bir senaryoda (ör. randevu araması) dene', 'Dakika başı ücretlendir'] },
+];
+const DIFF = ['', 'Kolay', 'Orta', 'Zor'];
+const pickBy = (list, text, seed, chosen) => chosen ? list.find((x) => x.id === chosen) : list.find((x) => x.re.test(text)) || list[Math.abs(seed) % list.length];
+
+function appName(it) {
+  if (ID_TITLE.has(it.sourceId)) return it.title.split(' / ').pop().replace(/[-_]/g, ' ');
+  const t = it.title.replace(/^Show HN:\s*/i, '');
+  return t.split(/\s[—–|-]\s|:\s/)[0].slice(0, 60);
+}
 
 function ideaFor(it, salt = 0) {
-  const seed = [...it.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) + salt * 13;
-  const niche = pick(NICHES, seed), form = pick(FORMS, seed >> 3), model = pick(MODELS, seed >> 6);
-  const title = tr1(it, 'title');
-  const prompt = `Şu projeden ilham alarak bir uygulama fikri geliştirmek istiyorum:\n\n"${title}" (${it.source}) — ${it.url}\n\nBunu ${niche} için bir ${form} olarak uyarlamak istiyorum, gelir modeli: ${model}.\n\n1) Bağlantıdaki projenin ne yaptığını kısaca açıkla.\n2) Bu hedef kitlenin en büyük 3 problemini ve uygulamanın çözümünü yaz.\n3) Bir hafta sonunda yapılabilecek MVP planı çıkar (teknoloji, ekranlar, hangi YZ modeli/API).\n4) İlk 10 müşteriyi nasıl bulacağımı ve fiyatı öner.\n5) Rakipleri ve beni farklı kılacak 2 özelliği söyle.`;
-  return { niche, form, model, title, prompt };
+  const text = `${it.title} ${it.summary} ${it.ex || ''}`;
+  const seed = [...it.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) + salt * 7;
+  const niche = pickBy(NICHES, text, seed, S.lab.niche || (salt ? NICHES[Math.abs(seed) % NICHES.length].id : ''));
+  const form = pickBy(FORMS, text, seed >> 3, S.lab.form);
+  const name = appName(it);
+  const what = tr1(it, 'ex') || tr1(it, 'summary') || '';
+  const why = it.sourceId === 'ghtrending' ? `Bugün GitHub’da hızla yıldız topluyor (${it.metric.split(' · ')[0]}).`
+    : it.sourceId === 'producthunt' ? 'Product Hunt’ta bu hafta öne çıktı.'
+    : it.sourceId === 'showhn' ? `Hacker News’te geliştiricilerin ilgisini çekti (${it.metric}).`
+    : it.metric ? `İlgi gösteriyor: ${it.metric}.` : `${it.source} kaynağında yeni çıktı.`;
+  const title = `${niche.name[0].toLocaleUpperCase('tr') + niche.name.slice(1)} için ${form.name}`;
+  const prompt = `Bir uygulama fikri geliştirmek istiyorum. İlham aldığım proje:\n\n"${name}" (${it.source}) — ${it.url}\nNe yapıyor: ${what}\n\nFikrim: Bunu ${niche.name} için bir ${form.name} olarak Türkiye pazarına uyarlamak.\nDüşündüğüm teknoloji: ${form.stack}\nFiyat fikri: ${niche.price}\n\nLütfen:\n1) İlham aldığım projenin neden ilgi gördüğünü kısaca açıkla.\n2) Bu hedef kitlenin en büyük 3 problemini ve uygulamanın çözümünü yaz.\n3) ${form.time} içinde yapılabilecek MVP planını adım adım çıkar (ekranlar, veri modeli, hangi YZ modeli).\n4) İlk 10 müşteriyi Türkiye’de nasıl bulacağımı somut kanallarla öner.\n5) Rakipleri ve beni farklı kılacak 2 özelliği söyle.\n6) Riskleri (KVKK, maliyet, bağımlılık) ve nasıl azaltacağımı yaz.`;
+  return { key: it.key + ':' + niche.id + ':' + form.id, it, name, what, why, niche, form, title, prompt };
 }
+
+function labIdeas() {
+  const pool = S.data.items
+    .filter((i) => ['apps', 'ideas'].includes(i.cat) && i.sourceId !== 'hfmodels' && Date.now() - i.date < 7 * 86400000 && (i.ex || i.summary))
+    .sort((a, b) => b.hot - a.hot);
+  // Aynı kaynaktan en fazla 4 fikir; "Karıştır" ile başka projeler gelir
+  const used = {}, out = [];
+  const start = (S.lab.salt * 5) % Math.max(1, pool.length);
+  for (const it of [...pool.slice(start), ...pool.slice(0, start)]) {
+    if ((used[it.sourceId] || 0) >= 4) continue;
+    used[it.sourceId] = (used[it.sourceId] || 0) + 1;
+    out.push(ideaFor(it, S.lab.salt));
+    if (out.length === 12) break;
+  }
+  return out;
+}
+
+function ideaCard(idea) {
+  S.prompts[idea.key] = idea.prompt;
+  const saved = !!S.ideas[idea.key];
+  return `
+  <article class="idea">
+    <div class="idea-top"><span class="chip">${esc(idea.it.source)}</span><button class="star ${saved ? 'on' : ''}" data-save-idea="${esc(idea.key)}" title="Fikri kaydet">${saved ? '★' : '☆'}</button></div>
+    <h3>${esc(idea.title)}</h3>
+    <div class="idea-insp">
+      <span class="lbl">İlham aldığı proje</span>
+      <b>${esc(idea.name)}</b>
+      <p>${esc(idea.what)}</p>
+      <p class="why">${esc(idea.why)}</p>
+    </div>
+    <dl class="idea-facts">
+      <dt>Zorluk</dt><dd><span class="diff d${idea.form.diff}">${'●'.repeat(idea.form.diff)}${'○'.repeat(3 - idea.form.diff)}</span> ${DIFF[idea.form.diff]} · ${idea.form.time}</dd>
+      <dt>Teknoloji</dt><dd>${esc(idea.form.stack)}</dd>
+      <dt>Fiyat</dt><dd>${esc(idea.niche.price)}</dd>
+    </dl>
+    <details class="idea-mvp"><summary>Adım adım MVP planı</summary><ol>${idea.form.mvp.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></details>
+    <div class="idea-actions">
+      <button class="btn primary" data-copy-prompt="${esc(idea.key)}">Claude için prompt'u kopyala</button>
+      <button class="btn" data-open="${esc(idea.it.key)}">Projeyi incele</button>
+    </div>
+  </article>`;
+}
+
 function renderLab() {
+  const ideas = labIdeas();
+  const opt = (list, cur) => `<option value="">Otomatik (projeye göre)</option>` + list.map((x) => `<option value="${x.id}" ${cur === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
+  $('#page').innerHTML = `
+    <div class="page-head">
+      <h2>Fikir Laboratuvarı</h2>
+      <p>Bu hafta yükselen uygulama ve projelerden Türkiye’de yapılabilecek ürün fikirleri. Her kart bir projeyi açıklar, onu bir hedef kitleye uyarlar ve Claude’a verebileceğin hazır bir plan istemi sunar.</p>
+    </div>
+    <div class="lab-own">
+      <div>
+        <h3>Kendi probleminden başla</h3>
+        <p>Etrafında gördüğün bir sorunu yaz; trend araçlarla nasıl çözülebileceğini soran bir istem hazırlayalım.</p>
+      </div>
+      <textarea id="ownProblem" rows="2" placeholder="Örn: Kuaförler randevuları WhatsApp’tan elle takip ediyor, sürekli karışıyor."></textarea>
+      <button class="btn primary" data-own>İstemi hazırla ve kopyala</button>
+    </div>
+    <div class="lab-controls">
+      <label>Hedef kitle <select id="labNiche">${opt(NICHES, S.lab.niche)}</select></label>
+      <label>Biçim <select id="labForm">${opt(FORMS, S.lab.form)}</select></label>
+      <button class="btn" data-shuffle>↻ Başka projeler</button>
+    </div>
+    <div class="idea-grid">${ideas.map(ideaCard).join('') || '<div class="empty">Bu hafta için yeterli veri yok.</div>'}</div>`;
+}
+
+function renderLabTeaser() {
   if (!S.data) return;
-  const list = S.data.items.filter((i) => ['apps', 'ideas', 'video'].includes(i.cat) && Date.now() - i.date < 7 * 86400000).sort((a, b) => b.hot - a.hot).slice(0, 50);
-  if (!list.length) return ($('#labBody').innerHTML = '<p class="note">Henüz veri yok.</p>');
-  const it = S.labItem || list[S.labIdx % list.length];
-  const idea = ideaFor(it, S.labIdx);
-  S.labPrompt = idea.prompt;
+  const idea = labIdeas()[0];
+  if (!idea) return ($('#labBody').innerHTML = '<p class="note">Henüz veri yok.</p>');
+  S.prompts[idea.key] = idea.prompt;
   $('#labBody').innerHTML = `
-    <p class="lab-from">İlham: <a href="#/h/${esc(it.key)}">${esc(idea.title.slice(0, 60))}</a></p>
-    <h4>Bunu <em>${esc(idea.niche)}</em> için uyarla</h4>
-    <dl><dt>Biçim</dt><dd>${esc(idea.form)}</dd><dt>Gelir</dt><dd>${esc(idea.model)}</dd></dl>
-    <button class="btn primary full" data-copy="lab">Claude için prompt'u kopyala</button>`;
+    <h4>${esc(idea.title)}</h4>
+    <p class="lab-from">İlham: <b>${esc(idea.name)}</b> — ${esc((idea.what || '').slice(0, 110))}${idea.what.length > 110 ? '…' : ''}</p>
+    <button class="btn primary full" data-view="lab">12 fikrin hepsini gör →</button>`;
 }
 
 // ─── Haber detay sayfası ────────────────────────────────────────────────
@@ -383,10 +547,10 @@ function renderDetail() {
   if (d === undefined) loadDetail(it);
   const loading = d === undefined || d === null;
   const from = srcLang(it);
-  const title = tr1(it, 'title');
+  const isApp = ['apps', 'ideas'].includes(it.cat);
+  const title = isApp && ID_TITLE.has(it.sourceId) ? appName(it) : tr1(it, 'title');
   const lead = d?.lead ? tx(d.lead, d.tr ? d.tr.lead : undefined, from) : tr1(it, 'summary');
   const points = (d?.points || []).map((p, i) => tx(p, d.tr ? d.tr.points?.[i] : undefined, from)).filter((p) => p && p !== lead);
-  const tab = TABS.find((t) => (t.cats || [t.id]).includes(it.cat)) || TABS[0];
   const img = d?.image || it.image;
   const media = d?.video
     ? `<iframe class="d-media" src="https://www.youtube-nocookie.com/embed/${esc(d.video)}" title="Video" allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`
@@ -398,30 +562,36 @@ function renderDetail() {
   const related = S.data.items
     .filter((x) => x.id !== it.id && (x.tags || []).some((t) => (it.tags || []).includes(t)) && Date.now() - x.date < 7 * 86400000)
     .sort((a, b) => b.hot - a.hot).slice(0, 5);
-  const showIdea = ['apps', 'ideas', 'video'].includes(it.cat);
-  const idea = showIdea ? ideaFor(it) : null;
-  if (idea) S.detailPrompt = idea.prompt;
+  const idea = ['apps', 'ideas', 'video'].includes(it.cat) ? ideaFor(it) : null;
+  if (idea) S.prompts[idea.key] = idea.prompt;
 
-  box.style.setProperty('--cc', tab.color);
+  box.style.setProperty('--cc', tabOf(it).color);
   box.innerHTML = `
     <button class="back" data-back>← Geri</button>
     <div class="d-meta"><span class="d-cat">${CAT_NAME[it.cat] || ''}</span><span>·</span><span>${esc(it.source)}</span><span>·</span><span>${it.dated === false ? 'bugün listede' : ago(it.date)}</span></div>
     <h1 class="d-title">${esc(title)}</h1>
-    ${title !== it.title ? `<p class="d-orig">Orijinal başlık: ${esc(it.title)}</p>` : '<div style="height:18px"></div>'}
+    ${title !== it.title && !isApp ? `<p class="d-orig">Orijinal başlık: ${esc(it.title)}</p>` : isApp && ID_TITLE.has(it.sourceId) ? `<p class="d-orig">${esc(it.title)}</p>` : '<div style="height:18px"></div>'}
     ${media}
     ${loading ? '<div class="loading-line"></div><div class="loading-line" style="width:80%"></div><div class="loading-line" style="width:60%"></div>' : `
+      ${isApp ? '<h3 class="d-h">Ne işe yarar?</h3>' : ''}
       ${lead ? `<p class="d-lead">${esc(lead)}</p>` : '<p class="d-lead" style="color:var(--muted)">Bu haber için özet çıkarılamadı. Ayrıntılar kaynakta.</p>'}
-      ${points.length ? `<h3 class="d-h">Öne çıkanlar</h3><ul class="d-points">${points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}`}
+      ${points.length ? `<h3 class="d-h">${isApp ? 'Öne çıkan özellikler' : 'Öne çıkanlar'}</h3><ul class="d-points">${points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}`}
     ${facts.length ? `<div class="d-facts">${facts.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+    ${idea ? `
+    <div class="d-idea">
+      <span class="lbl">💡 Bundan bir fikir çıkar</span>
+      <h4>${esc(idea.title)}</h4>
+      <p>${esc(DIFF[idea.form.diff])} · ${esc(idea.form.time)} · ${esc(idea.form.stack)}</p>
+      <div class="idea-actions"><button class="btn primary" data-copy-prompt="${esc(idea.key)}">Claude için prompt'u kopyala</button><button class="btn" data-view="lab">Fikir Lab’e git</button></div>
+    </div>` : ''}
     <div class="d-actions">
       <p>Daha derinlemesine okumak ister misin?</p>
-      <a class="btn primary" href="${esc(it.url)}">Kaynakta oku ↗</a>
+      <a class="btn primary" href="${esc(it.url)}">${it.cat === 'video' ? 'YouTube’da aç ↗' : 'Kaynakta oku ↗'}</a>
       ${foreign && readLang !== 'en' ? `<a class="btn" href="https://translate.google.com/translate?sl=auto&tl=${readLang}&u=${encodeURIComponent(it.url)}">Çeviriyle oku ↗</a>` : ''}
       ${it.discuss ? `<a class="btn" href="${esc(it.discuss)}">Tartışma ↗</a>` : ''}
       <button class="btn" data-save>${saved ? '★ Kaydedildi' : '☆ Kaydet'}</button>
     </div>
     <p class="d-note">Bu özet ${esc(hostOf(it.url))} sayfasından otomatik çıkarıldı${from !== 'tr' && S.lang === 'tr' ? ' ve Türkçeye çevrildi' : ''}. Kesin bilgi için kaynağı oku.</p>
-    ${idea ? `<div class="d-idea"><h4>Bundan bir fikir çıkar</h4><p>Bunu <b>${esc(idea.niche)}</b> için bir <b>${esc(idea.form)}</b> olarak uyarlamak üzere hazır bir prompt.</p><button class="btn" data-copy="detail">Claude için prompt'u kopyala</button></div>` : ''}
     ${related.length ? `<h3 class="d-h">Benzer haberler</h3><ul class="related">${related.map((r) => `<li><button data-open="${esc(r.key)}"><span class="t">${esc(tr1(r, 'title'))}</span><span class="s">${esc(r.source)} · ${ago(r.date)}</span></button></li>`).join('')}</ul>` : ''}`;
 }
 
@@ -450,7 +620,7 @@ function route() {
 addEventListener('hashchange', () => {
   const wasOpen = S.openKey;
   route();
-  if (wasOpen && !S.openKey) renderMain(); // okundu işaretlerini güncelle
+  if (wasOpen && !S.openKey && S.view === 'feed') renderMain();
 });
 
 // ─── Dış bağlantı onayı ─────────────────────────────────────────────────
@@ -474,11 +644,21 @@ $('#leave').addEventListener('click', (e) => e.target.id === 'leave' && closeLea
 
 // ─── Olaylar ────────────────────────────────────────────────────────────
 function setView(view) {
-  S.view = S.view === view && view !== 'feed' ? 'feed' : view;
+  S.view = view;
   S.limit = PAGE;
+  if (S.openKey) location.hash = '';
   renderTabs();
   renderMain();
   window.scrollTo({ top: Math.min(scrollY, $('#hero').offsetHeight), behavior: 'smooth' });
+}
+function setTab(id) {
+  S.tab = id;
+  store.set('tab', id);
+  setView('feed');
+}
+async function copy(text, msg = 'Kopyalandı — Claude’a yapıştırabilirsin') {
+  await navigator.clipboard.writeText(text).catch(() => {});
+  toast(msg);
 }
 
 document.addEventListener('click', async (e) => {
@@ -488,23 +668,43 @@ document.addEventListener('click', async (e) => {
     e.preventDefault();
     return askLeave(a.href);
   }
-  const t = e.target.closest('[data-open],[data-tab],[data-view],[data-home],[data-range],[data-sort],[data-vlang],[data-back],[data-save],[data-copy],#more,#labShuffle');
+  const t = e.target.closest('[data-idea],[data-copy-prompt],[data-save-idea],[data-copy-text],[data-own],[data-shuffle],[data-open],[data-tab],[data-view],[data-home],[data-range],[data-sort],[data-vlang],[data-back],[data-save],#more');
   if (!t) return;
+  if (t.dataset.idea) {
+    // Uygulama kartından doğrudan o projeye odaklı fikir
+    e.stopPropagation();
+    return openDetail(t.dataset.idea);
+  }
+  if (t.dataset.copyPrompt) return copy(S.prompts[t.dataset.copyPrompt]);
+  if (t.dataset.copyText) return copy(t.dataset.copyText);
+  if (t.dataset.saveIdea) {
+    const k = t.dataset.saveIdea;
+    if (S.ideas[k]) delete S.ideas[k];
+    else {
+      const idea = labIdeas().find((i) => i.key === k);
+      if (idea) S.ideas[k] = { title: idea.title + ' — ' + idea.name, prompt: idea.prompt, at: Date.now() };
+    }
+    store.set('ideas', S.ideas);
+    t.classList.toggle('on', !!S.ideas[k]);
+    t.textContent = S.ideas[k] ? '★' : '☆';
+    return toast(S.ideas[k] ? 'Fikir kaydedildi' : 'Fikir kayıttan çıkarıldı');
+  }
+  if (t.dataset.own !== undefined) {
+    const p = $('#ownProblem').value.trim();
+    if (!p) return toast('Önce bir problem yaz');
+    const trend = S.data.items.filter((i) => i.cat === 'apps').sort((a, b) => b.hot - a.hot).slice(0, 8).map((i) => `- ${appName(i)}: ${tr1(i, 'ex') || tr1(i, 'summary')}`).join('\n');
+    return copy(`Şu problemi yapay zeka ile çözen bir ürün fikri geliştirmek istiyorum:\n\n"${p}"\n\nBu hafta öne çıkan YZ araç ve projeleri:\n${trend}\n\n1) Problemi kimlerin, ne sıklıkta yaşadığını ve bunun maliyetini tahmin et.\n2) Bu araçlardan hangileri çözümde kullanılabilir, nasıl?\n3) 3 farklı ürün biçimi öner (WhatsApp botu, web uygulaması, mobil vb.) ve en mantıklısını seç.\n4) 2 hafta sonunda yapılabilecek MVP planı çıkar.\n5) Türkiye’de fiyatlandırma ve ilk 10 müşteriyi bulma yolu öner.`);
+  }
+  if (t.dataset.shuffle !== undefined) { S.lab.salt++; return renderLab(); }
   if (t.dataset.open) return openDetail(t.dataset.open);
-  if (t.dataset.home !== undefined) { e.preventDefault(); S.tab = 'all'; return setView('feed'); }
-  if (t.dataset.tab) { S.tab = t.dataset.tab; store.set('tab', S.tab); return setView('feed'); }
-  if (t.dataset.view) return setView(t.dataset.view);
+  if (t.dataset.home !== undefined) { e.preventDefault(); return setTab('all'); }
+  if (t.dataset.tab) return setTab(t.dataset.tab);
+  if (t.dataset.view) return setView(S.view === t.dataset.view && t.classList.contains('icon-btn') ? 'feed' : t.dataset.view);
   if (t.dataset.range) { S.range = Number(t.dataset.range); store.set('range', S.range); S.limit = PAGE; return renderMain(); }
   if (t.dataset.sort) { S.sort = t.dataset.sort; store.set('sort', S.sort); return renderMain(); }
   if (t.dataset.vlang !== undefined) { S.vlang = t.dataset.vlang; store.set('vlang', S.vlang); S.limit = PAGE; return renderMain(); }
   if (t.dataset.back !== undefined) return history.length > 1 ? history.back() : (location.hash = '');
   if (t.id === 'more') { S.limit += PAGE; return renderMain(); }
-  if (t.id === 'labShuffle') { S.labIdx++; S.labItem = null; return renderLab(); }
-  if (t.dataset.copy) {
-    const text = t.dataset.copy === 'lab' ? S.labPrompt : S.detailPrompt;
-    await navigator.clipboard.writeText(text).catch(() => {});
-    return toast('Kopyalandı — Claude’a yapıştırabilirsin');
-  }
   if (t.dataset.save !== undefined) {
     const it = findByKey(S.openKey);
     if (!it) return;
@@ -516,12 +716,16 @@ document.addEventListener('click', async (e) => {
   }
 });
 
+document.addEventListener('change', (e) => {
+  if (e.target.id === 'labNiche') { S.lab.niche = e.target.value; renderLab(); }
+  if (e.target.id === 'labForm') { S.lab.form = e.target.value; renderLab(); }
+});
 $('#langSel').addEventListener('change', (e) => {
   S.lang = e.target.value;
   store.set('lang', S.lang);
   TX.pending.clear();
   renderMain();
-  renderLab();
+  renderLabTeaser();
   if (S.openKey) renderDetail();
 });
 $('#arenaSel').addEventListener('change', (e) => { S.arena = e.target.value; store.set('arena', S.arena); renderBoard(); });
@@ -532,7 +736,7 @@ $('#q').addEventListener('input', (e) => {
   qT = setTimeout(() => {
     S.q = e.target.value.trim();
     S.limit = PAGE;
-    if (S.view !== 'feed') S.view = 'feed';
+    S.view = 'feed';
     renderTabs();
     renderMain();
   }, 150);
@@ -542,10 +746,16 @@ document.addEventListener('keydown', (e) => {
     if (!$('#leave').hidden) return closeLeave();
     if (S.openKey) return history.back();
   }
-  if (e.key === 'Enter' && e.target.matches('.card[data-open]')) return openDetail(e.target.dataset.open);
+  if (e.key === 'Enter' && e.target.matches('[data-open][tabindex]')) return openDetail(e.target.dataset.open);
   if (e.target.matches('input, select, textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.key === '/') { e.preventDefault(); $('#q').focus(); }
 });
+
+// Küredeki uyduya tıklayınca o kategoriye git
+if (window.Globe) window.Globe.onSelect = (id) => {
+  setTab(id);
+  document.getElementById('tabs').scrollIntoView({ behavior: 'smooth' });
+};
 
 // ─── Başlat ─────────────────────────────────────────────────────────────
 $('#feed').innerHTML = Array.from({ length: 6 }, () => '<div class="skel"></div>').join('');
