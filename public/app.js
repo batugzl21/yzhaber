@@ -19,7 +19,7 @@ const store = {
 
 const S = {
   data: null,
-  static: false,
+  static: location.hostname.endsWith('github.io'), // bulutta sunucu yok, doğrudan data/news.json okunur
   view: 'feed', // feed | saved | guide
   tab: store.get('tab', 'all'),
   range: store.get('range', 72),
