@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>YZ Radar</title>
+  <meta name="description" content="Dünyadaki yapay zeka haberleri, yeni modeller, yeni uygulamalar ve fikir ilhamı — saat başı güncellenir." />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <meta name="theme-color" content="#07080c" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <a class="brand" href="#" data-home>
+      <span class="brand-mark"><i></i></span>
+      <span>YZ<b>Radar</b></span>
+    </a>
+    <label class="search">
+      <svg viewBox="0 0 24 24" width="16" height="16"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/><path d="m20 20-3.5-3.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <input id="q" type="search" placeholder="Ara…" autocomplete="off" />
+    </label>
+    <select id="langSel" class="lang" aria-label="Haber dili" title="Haberlerin dili"></select>
+    <button class="icon-btn" data-view="saved" title="Kaydedilenler">
+      <svg viewBox="0 0 24 24" width="18" height="18"><path d="M6 3h12v18l-6-4-6 4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+    </button>
+    <button class="icon-btn" data-view="guide" title="Kaynak rehberi">
+      <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 11v6M12 7.5v.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </header>
+
+  <section class="hero" id="hero">
+    <canvas id="globe" aria-hidden="true"></canvas>
+    <div class="hero-copy">
+      <h1>Yapay zekada <span class="grad">bugün</span></h1>
+      <p class="sub" id="sub">Yükleniyor…</p>
+    </div>
+  </section>
+
+  <nav class="tabs" id="tabs"></nav>
+
+  <main class="layout">
+    <section class="feed-col">
+      <div class="controls" id="controls">
+        <div class="seg" id="range">
+          <button data-range="24">Bugün</button>
+          <button data-range="72">3 gün</button>
+          <button data-range="168">Hafta</button>
+        </div>
+        <div class="seg" id="sort">
+          <button data-sort="hot">Önemli</button>
+          <button data-sort="new">En yeni</button>
+        </div>
+        <div class="seg" id="vlang">
+          <button data-vlang="">Hepsi</button>
+          <button data-vlang="tr">Türkçe</button>
+          <button data-vlang="en">Yabancı</button>
+        </div>
+      </div>
+      <div id="brief"></div>
+      <div id="feed" class="feed"></div>
+      <button id="more" class="more" hidden>Daha fazla göster</button>
+      <div id="page" hidden></div>
+    </section>
+
+    <aside class="side" id="side">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>En iyi modeller</h3>
+          <select id="arenaSel" class="mini-sel" aria-label="Sıralama türü"></select>
+        </div>
+        <ol class="board" id="board"></ol>
+        <p class="note" id="boardNote"></p>
+      </div>
+      <div class="panel lab">
+        <div class="panel-head">
+          <h3>Fikir Laboratuvarı</h3>
+          <button class="link-btn" id="labShuffle">Başka fikir</button>
+        </div>
+        <div id="labBody"></div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- Haber detay sayfası -->
+  <div class="detail" id="detail" hidden>
+    <div class="detail-inner" id="detailBody"></div>
+  </div>
+
+  <!-- Dış bağlantı onayı -->
+  <div class="modal" id="leave" hidden>
+    <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="leaveTitle">
+      <h3 id="leaveTitle">Siteden ayrılıyorsun</h3>
+      <p>Bu bağlantı seni başka bir siteye götürecek:</p>
+      <p class="leave-host" id="leaveHost"></p>
+      <div class="modal-actions">
+        <button class="btn" id="leaveNo">Vazgeç</button>
+        <button class="btn primary" id="leaveYes">Devam et ↗</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="globe.js"></script>
+  <script src="guide.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

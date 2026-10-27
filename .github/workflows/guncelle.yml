@@ -1,0 +1,50 @@
+# Bulut sürümü: GitHub her saat kaynakları tarar, çevirir ve siteyi GitHub Pages'e yayınlar.
+# Bilgisayarının açık olmasına gerek yoktur.
+name: YZ Radar güncelle
+
+on:
+  schedule:
+    - cron: '7 * * * *'   # her saat başı (+7 dk)
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # Önceki çalışmanın önbelleği (çeviriler, "ilk görülme" zamanları, kaynak verileri)
+      - uses: actions/cache@v4
+        with:
+          path: data
+          key: radar-${{ github.run_id }}
+          restore-keys: radar-
+      - run: node server.js --build
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

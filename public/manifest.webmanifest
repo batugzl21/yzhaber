@@ -1,0 +1,11 @@
+{
+  "name": "YZ Radar",
+  "short_name": "YZ Radar",
+  "description": "Yapay zeka haberleri, yeni modeller, yeni uygulamalar ve fikir ilhamı — saat başı güncellenir.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#07080c",
+  "theme_color": "#07080c",
+  "lang": "tr",
+  "icons": [{ "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}
