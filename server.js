@@ -218,6 +218,24 @@ const fetchers = {
       }));
   },
 
+  // Ask HN: insanların aradığı araçlar ve dertleri. Reddit RSS kapanınca (13 Kasım 2026) fikir sinyalini taşır.
+  async askhn() {
+    const since = Math.floor(Date.now() / 1000) - 5 * 86400;
+    const r = await get(`https://hn.algolia.com/api/v1/search?tags=ask_hn&numericFilters=created_at_i>${since},points>15&hitsPerPage=100`, { json: true });
+    return r.hits
+      .filter((h) => AI_RE.test(h.title + ' ' + (h.story_text || '')))
+      .map((h) => ({
+        title: h.title,
+        url: `https://news.ycombinator.com/item?id=${h.objectID}`,
+        discuss: `https://news.ycombinator.com/item?id=${h.objectID}`,
+        summary: clip(stripHtml(h.story_text || '')),
+        date: toDate(h.created_at_i),
+        score: h.points,
+        metric: `▲ ${h.points} · 💬 ${h.num_comments || 0}`,
+        engage: h.points / 40,
+      }));
+  },
+
   async 'hf-papers'(src) {
     const r = await get(src.url, { json: true });
     return r.map((p) => ({

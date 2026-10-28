@@ -33,10 +33,9 @@ const S = {
   ideas: store.get('ideas', {}),
   read: new Set(store.get('read', [])),
   lastVisit: store.get('lastVisit', Date.now() - 6 * 3600000),
-  lab: { niche: '', form: '', salt: 0 },
+  labRes: null, // son Fikir Lab sonucu (sekme değişince korunur)
   details: new Map(),
   openKey: null,
-  prompts: {},
 };
 if (!TABS.some((t) => t.id === S.tab)) S.tab = 'all';
 const lastSeen = store.get('lastSeen', 0);
@@ -270,7 +269,7 @@ const appCard = (it) => `
     <div class="meta">${metaLine(it)}${it.metric ? `<span class="am">${esc(it.metric.split(' · ')[0])}</span>` : ''}</div>
     <h3>${esc(appName(it))}</h3>
     <p>${esc(tr1(it, 'ex') || tr1(it, 'summary') || '')}</p>
-    <button class="link-btn" data-idea="${esc(it.key)}">💡 Bundan fikir üret →</button>
+    <button class="link-btn" data-lab-from="${esc(it.key)}">💡 Benzerlerini araştır →</button>
   </article>`;
 
 // Manşet için: görseli olan, farklı kategori ve kaynaklardan en önemli haberler
@@ -332,9 +331,11 @@ function renderMain() {
 function renderSaved() {
   const list = Object.values(S.saved).sort((a, b) => b.savedAt - a.savedAt);
   const ideas = Object.values(S.ideas).sort((a, b) => b.at - a.at);
+  const labs = labSavedList();
   $('#page').innerHTML = `
-    <div class="page-head"><h2>Kaydedilenler</h2><p>${list.length || ideas.length ? '' : 'Bir haberin sayfasındaki “Kaydet” ya da Fikir Lab’deki ☆ ile buraya ekleyebilirsin.'}</p></div>
-    ${ideas.length ? `<h2 class="section-title">Fikirler</h2><ul class="hlist">${ideas.map((i) => `<li class="hl" data-copy-text="${esc(i.prompt)}"><span class="hl-cat">Fikir</span><span class="hl-t">${esc(i.title)}</span><span class="hl-m">prompt'u kopyala</span></li>`).join('')}</ul>` : ''}
+    <div class="page-head"><h2>Kaydedilenler</h2><p>${list.length || ideas.length || labs.length ? '' : 'Bir haberin sayfasındaki “Kaydet” ya da Fikir Lab’deki “★ Kaydet” ile buraya ekleyebilirsin.'}</p></div>
+    ${labs.length ? `<h2 class="section-title">Araştırmalar</h2><ul class="hlist">${labs.map((r) => `<li class="hl" data-lab-open="${esc(r.id)}" tabindex="0" role="link"><span class="hl-cat" style="--cc:var(--c-ideas)">Fikir Lab</span><span class="hl-t">${esc(r.idea)}</span><span class="hl-m">${ago(labTs(r.at))} · aç</span></li>`).join('')}</ul>` : ''}
+    ${ideas.length ? `<h2 class="section-title">Eski fikirler</h2><ul class="hlist">${ideas.map((i) => `<li class="hl" data-copy-text="${esc(i.prompt)}"><span class="hl-cat">Fikir</span><span class="hl-t">${esc(i.title)}</span><span class="hl-m">prompt'u kopyala</span></li>`).join('')}</ul>` : ''}
     ${list.length ? `<h2 class="section-title">Haberler</h2><ul class="hlist">${list.map(headline).join('')}</ul>` : ''}`;
 }
 
@@ -376,149 +377,14 @@ function renderBoard() {
   $('#boardNote').innerHTML = `LMArena · insan oylarıyla puan · ${esc(b.date || '')}`;
 }
 
-// ─── Fikir Laboratuvarı ─────────────────────────────────────────────────
-// Trend uygulamalardan Türkiye'ye uyarlanabilir ürün fikirleri. Niş ve biçim, ilham alınan
-// projenin konusuna göre seçilir; kullanıcı ikisini de elle değiştirebilir.
-const NICHES = [
-  { id: 'esnaf', name: 'mahalle esnafı ve küçük işletmeler', re: /shop|store|retail|pos|inventory|small business/i, price: '99–249 ₺/ay' },
-  { id: 'eticaret', name: 'e-ticaret satıcıları (Trendyol, Hepsiburada)', re: /e-?commerce|seller|product|listing|shopify|amazon|marketing|ads?\b|seo/i, price: '249–749 ₺/ay' },
-  { id: 'ogrenci', name: 'YKS/LGS öğrencileri', re: /learn|study|student|tutor|education|exam|quiz|course|flashcard/i, price: '79–149 ₺/ay' },
-  { id: 'ogretmen', name: 'öğretmenler', re: /teach|classroom|lesson|grading|school/i, price: '99–199 ₺/ay' },
-  { id: 'klinik', name: 'diş ve sağlık klinikleri', re: /health|medical|clinic|patient|doctor|appointment|therapy/i, price: '499–1.499 ₺/ay' },
-  { id: 'avukat', name: 'avukatlar ve hukuk büroları', re: /legal|law|contract|compliance|document review/i, price: '749–1.999 ₺/ay' },
-  { id: 'muhasebe', name: 'mali müşavirler', re: /invoice|account|tax|finance|bookkeep|receipt|expense/i, price: '499–1.499 ₺/ay' },
-  { id: 'emlak', name: 'emlak danışmanları', re: /real estate|property|listing|crm|lead/i, price: '299–899 ₺/ay' },
-  { id: 'icerik', name: 'YouTuber ve içerik üreticileri', re: /video|youtube|content|creator|thumbnail|caption|podcast|social|tiktok|edit/i, price: '149–449 ₺/ay' },
-  { id: 'restoran', name: 'kafe ve restoranlar', re: /restaurant|food|menu|order|delivery|cafe/i, price: '199–599 ₺/ay' },
-  { id: 'ik', name: 'İK ekipleri ve iş arayanlar', re: /hr\b|hiring|recruit|resume|cv\b|interview|job/i, price: '299–999 ₺/ay' },
-  { id: 'tasarimci', name: 'freelance tasarımcılar', re: /design|figma|ui\b|ux\b|logo|image|brand/i, price: '149–399 ₺/ay' },
-  { id: 'yazilimci', name: 'yazılımcılar ve ajanslar', re: /code|coding|developer|github|api|agent|cli|devtool|mcp|claude code|cursor/i, price: '199–599 ₺/ay' },
-  { id: 'otel', name: 'butik oteller ve pansiyonlar', re: /travel|hotel|booking|tourism|trip/i, price: '399–999 ₺/ay' },
-];
-const FORMS = [
-  { id: 'whatsapp', name: 'WhatsApp asistanı', re: /chat|assistant|support|customer|agent|bot|message/i, diff: 1, time: '1 hafta sonu',
-    stack: 'WhatsApp Cloud API · Claude API · Supabase',
-    mvp: ['Meta Business hesabı aç, WhatsApp Cloud API ile mesaj alıp gönder', 'Claude ile tek bir işi çok iyi yapan akışı kur (randevu, sipariş, soru-cevap)', 'Konuşmaları Supabase’e kaydet, 5 işletmeyle ücretsiz dene', 'İşe yarayınca aylık ücrete geç'] },
-  { id: 'web', name: 'web uygulaması (SaaS)', re: /dashboard|platform|saas|tool|analytics|generator|editor/i, diff: 2, time: '2–3 hafta sonu',
-    stack: 'Next.js · Supabase (giriş + veritabanı) · iyzico/Stripe · Claude API',
-    mvp: ['Tek sayfalık açılış sayfası yaz, bekleme listesi topla', 'Ana özelliği tek ekranda çalışır hale getir', 'Giriş ve ödeme ekle (iyzico)', 'Bekleme listesindekilere erken erişim ver'] },
-  { id: 'chrome', name: 'Chrome eklentisi', re: /browser|extension|chrome|web page|tab|read/i, diff: 1, time: '1–2 hafta sonu',
-    stack: 'Chrome Manifest V3 · Claude API (kendi sunucun üzerinden) · Plasmo',
-    mvp: ['Eklentinin tek bir sayfada tek bir işi yapmasını sağla', 'API anahtarını küçük bir sunucuda sakla', 'Chrome Web Store’a yükle', 'Ücretsiz kotadan sonra premium iste'] },
-  { id: 'mobile', name: 'mobil uygulama', re: /mobile|ios|android|app\b|camera|photo|voice|habit/i, diff: 3, time: '3–4 hafta sonu',
-    stack: 'Expo (React Native) · Supabase · RevenueCat · Claude API',
-    mvp: ['Expo ile tek ana ekranı çıkar', 'Supabase ile giriş ve veri sakla', 'TestFlight / dahili test ile 10 kişiye dağıt', 'RevenueCat ile abonelik ekle'] },
-  { id: 'telegram', name: 'Telegram botu', re: /notify|alert|monitor|digest|summar/i, diff: 1, time: '1 hafta sonu',
-    stack: 'Telegram Bot API · Claude API · Cloudflare Workers',
-    mvp: ['BotFather ile bot aç', 'Tek komutla çalışan ana özelliği yaz', 'Kullanıcı başına günlük kota koy', 'Telegram Stars ile ücretli plan ekle'] },
-  { id: 'mcp', name: 'Claude skill’i / MCP sunucusu', re: /mcp|skill|plugin|claude|integration|connector/i, diff: 1, time: '1 hafta sonu',
-    stack: 'MCP TypeScript SDK · npm · Claude Desktop / Claude Code',
-    mvp: ['Türk bir servisin (ör. e-Fatura, TCMB, Trendyol) API’sini MCP aracına çevir', 'Claude Desktop’ta dene', 'GitHub’da yayınla, awesome-mcp listelerine ekle', 'Kurumsal sürüm için destek paketi sat'] },
-  { id: 'voice', name: 'Türkçe sesli asistan', re: /voice|speech|audio|call|phone|transcri/i, diff: 2, time: '2 hafta sonu',
-    stack: 'Whisper / ElevenLabs · Claude API · Twilio (telefon)',
-    mvp: ['Türkçe konuşmayı yazıya çevir', 'Claude ile yanıt üret, sese çevir', 'Tek bir senaryoda (ör. randevu araması) dene', 'Dakika başı ücretlendir'] },
-];
-const DIFF = ['', 'Kolay', 'Orta', 'Zor'];
-const pickBy = (list, text, seed, chosen) => chosen ? list.find((x) => x.id === chosen) : list.find((x) => x.re.test(text)) || list[Math.abs(seed) % list.length];
-
+// ─── Fikir Lab ──────────────────────────────────────────────────────────
+// Arayüz lab.js, arama motoru lab-engine.js içinde. appName diğer yerlerde de kullanılır.
 function appName(it) {
   if (ID_TITLE.has(it.sourceId)) return it.title.split(' / ').pop().replace(/[-_]/g, ' ');
   const t = it.title.replace(/^Show HN:\s*/i, '');
   return t.split(/\s[—–|-]\s|:\s/)[0].slice(0, 60);
 }
 
-function ideaFor(it, salt = 0) {
-  const text = `${it.title} ${it.summary} ${it.ex || ''}`;
-  const seed = [...it.id].reduce((a, c) => (a * 31 + c.charCodeAt(0)) | 0, 7) + salt * 7;
-  const niche = pickBy(NICHES, text, seed, S.lab.niche || (salt ? NICHES[Math.abs(seed) % NICHES.length].id : ''));
-  const form = pickBy(FORMS, text, seed >> 3, S.lab.form);
-  const name = appName(it);
-  const what = tr1(it, 'ex') || tr1(it, 'summary') || '';
-  const why = it.sourceId === 'ghtrending' ? `Bugün GitHub’da hızla yıldız topluyor (${it.metric.split(' · ')[0]}).`
-    : it.sourceId === 'producthunt' ? 'Product Hunt’ta bu hafta öne çıktı.'
-    : it.sourceId === 'showhn' ? `Hacker News’te geliştiricilerin ilgisini çekti (${it.metric}).`
-    : it.metric ? `İlgi gösteriyor: ${it.metric}.` : `${it.source} kaynağında yeni çıktı.`;
-  const title = `${niche.name[0].toLocaleUpperCase('tr') + niche.name.slice(1)} için ${form.name}`;
-  const prompt = `Bir uygulama fikri geliştirmek istiyorum. İlham aldığım proje:\n\n"${name}" (${it.source}) — ${it.url}\nNe yapıyor: ${what}\n\nFikrim: Bunu ${niche.name} için bir ${form.name} olarak Türkiye pazarına uyarlamak.\nDüşündüğüm teknoloji: ${form.stack}\nFiyat fikri: ${niche.price}\n\nLütfen:\n1) İlham aldığım projenin neden ilgi gördüğünü kısaca açıkla.\n2) Bu hedef kitlenin en büyük 3 problemini ve uygulamanın çözümünü yaz.\n3) ${form.time} içinde yapılabilecek MVP planını adım adım çıkar (ekranlar, veri modeli, hangi YZ modeli).\n4) İlk 10 müşteriyi Türkiye’de nasıl bulacağımı somut kanallarla öner.\n5) Rakipleri ve beni farklı kılacak 2 özelliği söyle.\n6) Riskleri (KVKK, maliyet, bağımlılık) ve nasıl azaltacağımı yaz.`;
-  return { key: it.key + ':' + niche.id + ':' + form.id, it, name, what, why, niche, form, title, prompt };
-}
-
-function labIdeas() {
-  const pool = S.data.items
-    .filter((i) => ['apps', 'ideas'].includes(i.cat) && i.sourceId !== 'hfmodels' && Date.now() - i.date < 7 * 86400000 && (i.ex || i.summary))
-    .sort((a, b) => b.hot - a.hot);
-  // Aynı kaynaktan en fazla 4 fikir; "Karıştır" ile başka projeler gelir
-  const used = {}, out = [];
-  const start = (S.lab.salt * 5) % Math.max(1, pool.length);
-  for (const it of [...pool.slice(start), ...pool.slice(0, start)]) {
-    if ((used[it.sourceId] || 0) >= 4) continue;
-    used[it.sourceId] = (used[it.sourceId] || 0) + 1;
-    out.push(ideaFor(it, S.lab.salt));
-    if (out.length === 12) break;
-  }
-  return out;
-}
-
-function ideaCard(idea) {
-  S.prompts[idea.key] = idea.prompt;
-  const saved = !!S.ideas[idea.key];
-  return `
-  <article class="idea">
-    <div class="idea-top"><span class="chip">${esc(idea.it.source)}</span><button class="star ${saved ? 'on' : ''}" data-save-idea="${esc(idea.key)}" title="Fikri kaydet">${saved ? '★' : '☆'}</button></div>
-    <h3>${esc(idea.title)}</h3>
-    <div class="idea-insp">
-      <span class="lbl">İlham aldığı proje</span>
-      <b>${esc(idea.name)}</b>
-      <p>${esc(idea.what)}</p>
-      <p class="why">${esc(idea.why)}</p>
-    </div>
-    <dl class="idea-facts">
-      <dt>Zorluk</dt><dd><span class="diff d${idea.form.diff}">${'●'.repeat(idea.form.diff)}${'○'.repeat(3 - idea.form.diff)}</span> ${DIFF[idea.form.diff]} · ${idea.form.time}</dd>
-      <dt>Teknoloji</dt><dd>${esc(idea.form.stack)}</dd>
-      <dt>Fiyat</dt><dd>${esc(idea.niche.price)}</dd>
-    </dl>
-    <details class="idea-mvp"><summary>Adım adım MVP planı</summary><ol>${idea.form.mvp.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></details>
-    <div class="idea-actions">
-      <button class="btn primary" data-copy-prompt="${esc(idea.key)}">Claude için prompt'u kopyala</button>
-      <button class="btn" data-open="${esc(idea.it.key)}">Projeyi incele</button>
-    </div>
-  </article>`;
-}
-
-function renderLab() {
-  const ideas = labIdeas();
-  const opt = (list, cur) => `<option value="">Otomatik (projeye göre)</option>` + list.map((x) => `<option value="${x.id}" ${cur === x.id ? 'selected' : ''}>${esc(x.name)}</option>`).join('');
-  $('#page').innerHTML = `
-    <div class="page-head">
-      <h2>Fikir Laboratuvarı</h2>
-      <p>Bu hafta yükselen uygulama ve projelerden Türkiye’de yapılabilecek ürün fikirleri. Her kart bir projeyi açıklar, onu bir hedef kitleye uyarlar ve Claude’a verebileceğin hazır bir plan istemi sunar.</p>
-    </div>
-    <div class="lab-own">
-      <div>
-        <h3>Kendi probleminden başla</h3>
-        <p>Etrafında gördüğün bir sorunu yaz; trend araçlarla nasıl çözülebileceğini soran bir istem hazırlayalım.</p>
-      </div>
-      <textarea id="ownProblem" rows="2" placeholder="Örn: Kuaförler randevuları WhatsApp’tan elle takip ediyor, sürekli karışıyor."></textarea>
-      <button class="btn primary" data-own>İstemi hazırla ve kopyala</button>
-    </div>
-    <div class="lab-controls">
-      <label>Hedef kitle <select id="labNiche">${opt(NICHES, S.lab.niche)}</select></label>
-      <label>Biçim <select id="labForm">${opt(FORMS, S.lab.form)}</select></label>
-      <button class="btn" data-shuffle>↻ Başka projeler</button>
-    </div>
-    <div class="idea-grid">${ideas.map(ideaCard).join('') || '<div class="empty">Bu hafta için yeterli veri yok.</div>'}</div>`;
-}
-
-function renderLabTeaser() {
-  if (!S.data) return;
-  const idea = labIdeas()[0];
-  if (!idea) return ($('#labBody').innerHTML = '<p class="note">Henüz veri yok.</p>');
-  S.prompts[idea.key] = idea.prompt;
-  $('#labBody').innerHTML = `
-    <h4>${esc(idea.title)}</h4>
-    <p class="lab-from">İlham: <b>${esc(idea.name)}</b> — ${esc((idea.what || '').slice(0, 110))}${idea.what.length > 110 ? '…' : ''}</p>
-    <button class="btn primary full" data-view="lab">12 fikrin hepsini gör →</button>`;
-}
 
 // ─── Haber detay sayfası ────────────────────────────────────────────────
 function findByKey(key) {
@@ -562,8 +428,7 @@ function renderDetail() {
   const related = S.data.items
     .filter((x) => x.id !== it.id && (x.tags || []).some((t) => (it.tags || []).includes(t)) && Date.now() - x.date < 7 * 86400000)
     .sort((a, b) => b.hot - a.hot).slice(0, 5);
-  const idea = ['apps', 'ideas', 'video'].includes(it.cat) ? ideaFor(it) : null;
-  if (idea) S.prompts[idea.key] = idea.prompt;
+  const labbable = ['apps', 'ideas', 'video'].includes(it.cat);
 
   box.style.setProperty('--cc', tabOf(it).color);
   box.innerHTML = `
@@ -577,12 +442,12 @@ function renderDetail() {
       ${lead ? `<p class="d-lead">${esc(lead)}</p>` : '<p class="d-lead" style="color:var(--muted)">Bu haber için özet çıkarılamadı. Ayrıntılar kaynakta.</p>'}
       ${points.length ? `<h3 class="d-h">${isApp ? 'Öne çıkan özellikler' : 'Öne çıkanlar'}</h3><ul class="d-points">${points.map((p) => `<li>${esc(p)}</li>`).join('')}</ul>` : ''}`}
     ${facts.length ? `<div class="d-facts">${facts.map((f) => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
-    ${idea ? `
+    ${labbable ? `
     <div class="d-idea">
-      <span class="lbl">💡 Bundan bir fikir çıkar</span>
-      <h4>${esc(idea.title)}</h4>
-      <p>${esc(DIFF[idea.form.diff])} · ${esc(idea.form.time)} · ${esc(idea.form.stack)}</p>
-      <div class="idea-actions"><button class="btn primary" data-copy-prompt="${esc(idea.key)}">Claude için prompt'u kopyala</button><button class="btn" data-view="lab">Fikir Lab’e git</button></div>
+      <span class="lbl">💡 Fikir Lab</span>
+      <h4>Bunu kendi fikrine çevir</h4>
+      <p>Bunun açık kaynak benzerlerini ve insanların ne istediğini bul.</p>
+      <div class="idea-actions"><button class="btn primary" data-lab-from="${esc(it.key)}">Benzerlerini araştır →</button></div>
     </div>` : ''}
     <div class="d-actions">
       <p>Daha derinlemesine okumak ister misin?</p>
@@ -668,34 +533,14 @@ document.addEventListener('click', async (e) => {
     e.preventDefault();
     return askLeave(a.href);
   }
-  const t = e.target.closest('[data-idea],[data-copy-prompt],[data-save-idea],[data-copy-text],[data-own],[data-shuffle],[data-open],[data-tab],[data-view],[data-home],[data-range],[data-sort],[data-vlang],[data-back],[data-save],#more');
+  const t = e.target.closest('[data-lab-from],[data-copy-text],[data-open],[data-tab],[data-view],[data-home],[data-range],[data-sort],[data-vlang],[data-back],[data-save],#more');
   if (!t) return;
-  if (t.dataset.idea) {
-    // Uygulama kartından doğrudan o projeye odaklı fikir
+  if (t.dataset.labFrom) {
+    // Kart ya da detaydaki düğme: o projenin benzerlerini Fikir Lab'de araştır
     e.stopPropagation();
-    return openDetail(t.dataset.idea);
+    return labFromItem(t.dataset.labFrom);
   }
-  if (t.dataset.copyPrompt) return copy(S.prompts[t.dataset.copyPrompt]);
   if (t.dataset.copyText) return copy(t.dataset.copyText);
-  if (t.dataset.saveIdea) {
-    const k = t.dataset.saveIdea;
-    if (S.ideas[k]) delete S.ideas[k];
-    else {
-      const idea = labIdeas().find((i) => i.key === k);
-      if (idea) S.ideas[k] = { title: idea.title + ' — ' + idea.name, prompt: idea.prompt, at: Date.now() };
-    }
-    store.set('ideas', S.ideas);
-    t.classList.toggle('on', !!S.ideas[k]);
-    t.textContent = S.ideas[k] ? '★' : '☆';
-    return toast(S.ideas[k] ? 'Fikir kaydedildi' : 'Fikir kayıttan çıkarıldı');
-  }
-  if (t.dataset.own !== undefined) {
-    const p = $('#ownProblem').value.trim();
-    if (!p) return toast('Önce bir problem yaz');
-    const trend = S.data.items.filter((i) => i.cat === 'apps').sort((a, b) => b.hot - a.hot).slice(0, 8).map((i) => `- ${appName(i)}: ${tr1(i, 'ex') || tr1(i, 'summary')}`).join('\n');
-    return copy(`Şu problemi yapay zeka ile çözen bir ürün fikri geliştirmek istiyorum:\n\n"${p}"\n\nBu hafta öne çıkan YZ araç ve projeleri:\n${trend}\n\n1) Problemi kimlerin, ne sıklıkta yaşadığını ve bunun maliyetini tahmin et.\n2) Bu araçlardan hangileri çözümde kullanılabilir, nasıl?\n3) 3 farklı ürün biçimi öner (WhatsApp botu, web uygulaması, mobil vb.) ve en mantıklısını seç.\n4) 2 hafta sonunda yapılabilecek MVP planı çıkar.\n5) Türkiye’de fiyatlandırma ve ilk 10 müşteriyi bulma yolu öner.`);
-  }
-  if (t.dataset.shuffle !== undefined) { S.lab.salt++; return renderLab(); }
   if (t.dataset.open) return openDetail(t.dataset.open);
   if (t.dataset.home !== undefined) { e.preventDefault(); return setTab('all'); }
   if (t.dataset.tab) return setTab(t.dataset.tab);
@@ -716,10 +561,6 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-document.addEventListener('change', (e) => {
-  if (e.target.id === 'labNiche') { S.lab.niche = e.target.value; renderLab(); }
-  if (e.target.id === 'labForm') { S.lab.form = e.target.value; renderLab(); }
-});
 $('#langSel').addEventListener('change', (e) => {
   S.lang = e.target.value;
   store.set('lang', S.lang);

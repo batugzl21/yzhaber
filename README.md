@@ -26,6 +26,20 @@ Not: GitHub, 60 gün boyunca hiç commit gelmeyen depolarda zamanlanmış görev
 - Sağ panelde **en iyi modeller** sıralaması (LMArena) ve **Fikir Laboratuvarı** yer alır.
 - Sağ üstteki simgeler: kaydedilen haberler ve kaynak rehberi.
 
+### Fikir Lab
+Aklındaki uygulama fikrini Türkçe yaz, **Araştır**'a bas. Fikir Lab şunları getirir:
+- **Başlangıç noktaları:** Fork'layabileceğin açık kaynak repolar. Her biri lisans, güncellik ve "neden önerdik" bilgisiyle gelir.
+- **Yapı taşları:** WhatsApp, Chrome eklentisi, OCR gibi parçalar için hazır kütüphaneler.
+- **Benzer ürünler:** Show HN'de çıkmış ürünler ve radarda geçen haberler.
+- **İnsanlar ne istiyor:** HN yorumlarından ve en çok 👍 alan GitHub isteklerinden alıntılar.
+- **Sonraki adım:** Tüm kanıtları içeren hazır bir Claude istemi. Araştırmayı kaydedebilir ya da Markdown olarak indirebilirsin.
+
+Her şey tarayıcıda çalışır; sunucu ya da anahtar gerekmez. ⚙ ayarlarından isteğe bağlı olarak iki şey ekleyebilirsin:
+- **Claude API anahtarı:** Akıllı modu açar. Bu modda sorguları ve sıralamayı Claude yapar.
+- **GitHub token'ı:** Dakikada 10 aramalık sınırı artırır.
+
+Anahtarlar yalnızca senin tarayıcında saklanır. Motor testleri: `node --test "test/*.test.js"`.
+
 | Sekme | İçerik |
 |---|---|
 | Modeller | Laboratuvar duyuruları (OpenAI, Anthropic, DeepMind, Mistral, xAI…), OpenRouter'a gelen yeni API modelleri, Hugging Face'e yüklenen yeni açık modeller, Claude Code / Codex / Cursor sürümleri |

@@ -1,5 +1,5 @@
 // Haber kaynakları. Her kaynak canlı olarak test edildi (Ekim 2026).
-// type: rss | hn | showhn | hf-papers | hf-models | hf-spaces | gh-trending | gh-new | anthropic | reddit
+// type: rss | hn | showhn | askhn | hf-papers | hf-models | hf-spaces | gh-trending | gh-new | anthropic | reddit
 // cat:  models | news | tr | apps | ideas | research | community | video
 // aiOnly: genel akışlarda yalnızca yapay zeka ile ilgili başlıkları al
 // weight: güvenilirlik/önem çarpanı (gündem sıralamasında kullanılır)
@@ -90,6 +90,7 @@ module.exports = [
   { id: 'lenny', name: 'Lenny’s Newsletter', type: 'rss', url: 'https://www.lennysnewsletter.com/feed', cat: 'ideas', weight: 1.0, limit: 4 },
   { id: 'trendsvc', name: 'Trends.vc', type: 'rss', url: 'https://trends.vc/feed/', cat: 'ideas', weight: 1.0, limit: 4 },
   { id: 'starterstory', name: 'Starter Story', type: 'rss', url: 'https://www.youtube.com/feeds/videos.xml?channel_id=UChhw6DlKKTQ9mYSpTfXUYqA', cat: 'ideas', weight: 1.0, limit: 4 },
+  { id: 'askhn', name: 'Ask HN', type: 'askhn', cat: 'ideas', weight: 1.0 },
   { id: 'reddit-build', name: 'Reddit · Üreticiler', type: 'reddit', subs: ['SideProject', 'ClaudeAI', 'ChatGPTCoding', 'vibecoding', 'AI_Agents'], cat: 'ideas', weight: 1.0 },
 
   // ── Öğren: yapay zekayı derinlemesine anlamak için ──────────────────
