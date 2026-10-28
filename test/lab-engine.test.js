@@ -71,7 +71,7 @@ test('plan: sorgular kitle+nesne ve nesne öbeklerinden kurulur', () => {
   assert.ok(qs(plans[1]).includes('invoice ocr') && qs(plans[1]).includes('e-fatura'));
   assert.deepEqual(qs(plans[11]).slice(0, 1), ['google review reply']);
   assert.ok(qs(plans[10]).includes('podcast clip'), 'kitlesiz fikirde çapraz kombinasyon');
-  assert.ok(!qs(plans[2]).some((q) => /\byks\b/.test(q)), 'yks tek başına GitHub’da gürültü getirir');
+  assert.ok(qs(plans[2]).some((q) => q === '"yks sınav" OR "yks exam"'), 'YKS yalnızca sınavla eşlenmiş ayrı OR sorgusunda aranır');
   assert.match(plans[0].queries.blocks[0], /^whatsapp api/);
   assert.match(plans[3].queries.blocks[0], /^extension framework/);
   for (const p of plans) {
@@ -1084,4 +1084,920 @@ test('rankRepos: geniş konut alternatifinden gelen property management projesi 
   assert.equal(out[0].bodyMainOk, false, 'aidat takibi açıklamada doğrulanmadı');
   assert.equal(out[0].best, false);
   assert.notEqual(L.verdict(R({ repos: out })).kind, 'fork');
+});
+
+
+// ─── Eğitim Atlası ve eğitimci soruları ──────────────────────────────────
+const EDU_ATLAS = { categories: [
+  { id: 'planning', title: 'Öğretmen asistanı', keywords: ['lesson plan', 'rubric'], tr_keywords: ['ders planı', 'rubrik'],
+    evidence: Array.from({ length: 5 }, (_, i) => ({ title: 'Planlama araştırması ' + i, url: 'https://evidence.example/plan-' + i, finding: 'Öğretmen kontrolüyle hazırlık süresi azaldı.' })), repos: [] },
+  { id: 'assessment', title: 'Ölçme değerlendirme', keywords: ['rubric', 'assessment'], tr_keywords: ['rubrik', 'ölçme değerlendirme'], evidence: [], repos: [] },
+  { id: 'general', title: 'Genel eğitim', keywords: ['teacher', 'education'], tr_keywords: ['öğretmen', 'eğitim'], evidence: [], repos: [] },
+] };
+const eduNet = (over = {}) => mockNet({
+  'search/repositories': () => json({ total_count: 0, items: [] }),
+  'search/issues': () => json({ items: [] }),
+  'hn.algolia.com': () => json({ hits: [] }),
+  'api.stackexchange.com': () => json({ items: [], quota_remaining: 299 }),
+  ...over,
+});
+const seCalls = (net) => net.calls.filter((c) => c.url.includes('api.stackexchange.com'));
+const eduRepo = (name, desc = 'Lesson plan and rubric builder for teachers') => ({ name, desc, url: 'https://github.com/' + name,
+  stars: 300, forks: 20, pushed: Date.now() - 10 * DAY, lang: 'JavaScript', topics: ['lesson-plan'], license: { id: 'MIT', kind: 'permissive' }, archived: false });
+
+test('eduMatch: Türkçe kökler, İngilizce öbekler, sıralı ve sınırlı puan; genel kelimeler atlası doldurmaz', () => {
+  const out = L.eduMatch('Öğretmenler için ders planları ve rubrikler', 'Lesson plans and rubrics for teachers', EDU_ATLAS);
+  assert.deepEqual(out.map((c) => c.id), ['assessment', 'planning']);
+  assert.ok(out.every((c) => c.score >= 0 && c.score <= 1));
+  assert.equal(L.eduMatch('Öğretmen eğitim uygulaması', 'Teacher education', EDU_ATLAS).length, 0);
+  assert.deepEqual(L.eduMatch('Kuaför randevusu', 'Salon booking', EDU_ATLAS), []);
+  assert.deepEqual(L.eduMatch('ders planı', 'lesson plan'), []);
+});
+
+test('eğitim kavramları: çeviri yokken de anlam ve arama alternatifleri korunur', () => {
+  for (const [tr, term, alternative] of [
+    ['Ders planı', 'lesson plan', 'lesson planning'], ['Kazanımlar', 'learning outcomes', 'learning objectives'],
+    ['Ölçme değerlendirme', 'assessment', 'formative assessment'], ['Dereceli puanlama rubrik', 'rubric', 'grading rubric'],
+    ['Soru bankası', 'question bank', 'quiz bank'], ['Deneme sınavı', 'mock exam', 'practice test'],
+    ['Özel eğitim BEP', 'special education', 'IEP'], ['Disleksi', 'dyslexia', 'dyslexic'],
+    ['Okuma yazma', 'literacy', 'reading'], ['Okul öncesi', 'early childhood', 'preschool'],
+    ['Rehberlik', 'school counseling', 'student guidance'], ['Veli', 'parent communication', 'school parent'],
+    ['Ödev', 'homework', 'assignment'], ['Öğretmenler', 'teacher', 'educator'], ['Öğrenciler', 'student', 'learner'],
+    ['Sınıf', 'classroom', 'class management'], ['Akran', 'peer', 'peer learning'], ['Geri bildirim', 'feedback', 'formative feedback'],
+    ['Ters yüz sınıf', 'flipped classroom', 'flipped learning'], ['Oyunlaştırma', 'gamification', 'game based learning'],
+    ['Uzaktan eğitim', 'online learning', 'LMS'], ['Kodlama eğitimi', 'programming education', 'autograder'],
+    ['Matematik', 'math', 'mathematics'], ['Fen', 'science', 'STEM education'], ['İngilizce öğrenme', 'language learning', 'ESL'],
+  ]) {
+    const en = L._.enFromDict(tr), p = L.planQueries(en, tr);
+    assert.ok(en.includes(term), tr + ': ' + en);
+    const c = p.concepts.find((c) => c.t === term);
+    assert.ok(c, tr + ': ' + p.terms.join(', '));
+    assert.ok(c.queryAlts?.includes(alternative), tr + ': ' + JSON.stringify(c.queryAlts));
+  }
+});
+
+test('eğitim kavramları: sınav kısaltmaları yalnızca eşlenmiş repo sorgusuna taşınır; kurum adları taşınmaz', () => {
+  for (const acronym of ['LGS', 'YKS', 'KPSS', 'TYT', 'AYT']) {
+    const tr = acronym + ' öğrencileri için deneme sınavı ve soru bankası';
+    const p = L.planQueries(acronym + ' students mock exams and question bank', tr);
+    assert.ok(p.concepts.some((c) => c.t.includes('exam prep')));
+    const hint = p.repoQ.find((q) => q.examHint);
+    assert.equal(hint.terms[0], '"' + acronym.toLowerCase() + ' sınav" OR "' + acronym.toLowerCase() + ' exam"');
+    assert.doesNotMatch(JSON.stringify({ ...p.queries, repos: p.queries.repos.filter((q) => !q.includes(' OR ')) }), /\b(?:lgs|yks|kpss|tyt|ayt)\b/i);
+  }
+  const p = L.planQueries('e-Okul EBA MEBBIS lesson planning', 'e-Okul EBA MEBBİS ders planı');
+  assert.doesNotMatch(JSON.stringify(p.queries), /e-okul|e-school|\beba\b|mebbis/i);
+  const strict = L.planQueries('Invoice editor', 'Öğretmen ders planı', true);
+  assert.ok(!strict.terms.some((t) => /lesson|teacher/.test(t)));
+});
+
+test('research: eğitim düzeyi ve kanıtlar saklanır, eğitim dışı fikir kaynak çağırmaz', async () => {
+  const net = eduNet();
+  const r = await L.research('Lise öğretmenleri için ders planı ve rubrik', { en: 'Lesson plan and rubric for high school teachers', atlas: EDU_ATLAS, fetch: net.fetch });
+  assert.equal(r.edu.level, 'lise');
+  assert.equal(r.edu.evidence.length, 4);
+  assert.equal(r.edu.cats[0].id, 'assessment');
+  assert.ok(r.edu.evidence.every((e) => e.title && e.finding && e.url.startsWith('https://')));
+  const generic = await L.research('Üniversite öğrencilerine yardımcı', { en: 'An assistant for university students', fetch: net.fetch });
+  assert.ok(generic.edu && generic.edu.level === 'üniversite');
+  const other = eduNet();
+  const salon = await L.research(IDEA, { en: IDEAS[0][1], atlas: EDU_ATLAS, fetch: other.fetch });
+  assert.equal(salon.edu, null);
+  assert.equal(seCalls(other).length, 0);
+  const machine = await L.research('Makine öğrenmesi modeli', { en: 'Machine learning model with a learning rate scheduler', fetch: other.fetch });
+  assert.equal(machine.edu, null);
+});
+
+test('research: yalnızca ilk iki kategorinin zenginleştirilmiş ve ilgili repoları küratörlü eklenir', async () => {
+  const atlas = { categories: [
+    { ...EDU_ATLAS.categories[0], repos: [...Array.from({ length: 6 }, (_, i) => eduRepo('atlas/planner-' + i)), eduRepo('atlas/weather', 'Weather forecast'), { name: 'atlas/raw' }] },
+    { ...EDU_ATLAS.categories[1], repos: [eduRepo('atlas/assessment')] },
+    { id: 'third', title: 'Üçüncü', keywords: ['lesson plan'], repos: [eduRepo('atlas/third')] },
+  ] };
+  const net = eduNet({ 'search/repositories': () => json({ items: Array.from({ length: 8 }, (_, i) => repo({ n: 'web/planner-' + i, d: 'Lesson plan and rubric builder for teachers', s: 300 })) }) });
+  const r = await L.research('Öğretmen için ders planı rubrik', { en: 'Lesson plan rubric', atlas, fetch: net.fetch });
+  assert.equal(r.repos.length, 8);
+  const curated = r.repos.filter((r) => r.curated);
+  assert.equal(curated.length, 3);
+  assert.ok(curated.every((r) => r.why.includes('Eğitim Atlası’nda öneriliyor')));
+  assert.ok(!r.repos.some((r) => /weather|raw|third/.test(r.name)));
+  assert.ok(net.gh().length <= 5);
+  const off = eduNet({ 'api.github.com': () => json({ message: 'limit' }, 403) });
+  const seeded = await L.research('Ders planı rubrik', { en: 'Lesson plan rubric', atlas, fetch: off.fetch });
+  assert.equal(seeded.repos.filter((r) => r.curated).length, 3, 'GitHub başarısızken yerel atlas korunur');
+});
+
+test('rankRepos: küratörlü etiket alaka eşiğini aşamaz ve destek küçük kalır', () => {
+  const p = L.planQueries('Lesson plan rubric');
+  const plain = L.rankRepos([eduRepo('atlas/planner')], p)[0];
+  const boosted = L.rankRepos([{ ...eduRepo('atlas/planner'), curated: true }, { ...eduRepo('atlas/weather', 'Weather forecast'), curated: true }], p);
+  assert.equal(boosted.length, 1);
+  assert.ok(boosted[0].score > plain.score && boosted[0].score - plain.score <= 0.026);
+});
+
+test('research: Stack Exchange konu seçimi, başlık çözme, tarih/oy/kaynak ve kota bilgisi', async () => {
+  const net = eduNet({ 'api.stackexchange.com': (url) => {
+    const site = new URL(url).searchParams.get('site');
+    return json({ quota_remaining: site === 'matheducators' ? 298 : 297, items: [
+      { title: 'How to teach math &amp; give &#39;feedback&#39;?', link: 'https://' + site + '.stackexchange.com/questions/1', creation_date: 1700000000, score: 12 },
+      { title: 'Unsafe', link: 'http://example.com', creation_date: 10, score: 100 },
+    ] });
+  } });
+  const r = await L.research('Ortaokul matematik geri bildirim', { en: 'Math feedback for middle school students', fetch: net.fetch });
+  assert.equal(r.edu.level, 'ortaokul');
+  const calls = seCalls(net).map((c) => new URL(c.url));
+  assert.deepEqual(calls.map((u) => u.searchParams.get('site')), ['matheducators']);
+  for (const u of calls) {
+    for (const [k, v] of Object.entries({ order: 'desc', sort: 'relevance', pagesize: '10', filter: 'default' })) assert.equal(u.searchParams.get(k), v);
+    assert.ok(u.searchParams.get('q').split(' ').length >= 2 && u.searchParams.get('q').split(' ').length <= 3);
+  }
+  const need = r.needs.find((n) => n.where === 'matheducators');
+  assert.equal(need.text, "How to teach math & give 'feedback'?");
+  assert.equal(need.source, 'Eğitimci sorusu');
+  assert.equal(need.date, 1700000000000);
+  assert.equal(need.votes, 12);
+  assert.deepEqual(r.sources.find((s) => s.id === 'stackexchange'), { id: 'stackexchange', ok: true, n: 1, quota_remaining: 298 });
+  httpsOnly(r);
+  const code = eduNet();
+  await L.research('Kodlama eğitimi', { en: 'Programming education with autograder', fetch: code.fetch });
+  assert.deepEqual(seCalls(code).map((c) => new URL(c.url).searchParams.get('site')), ['cseducators']);
+});
+
+test('research: Stack Exchange backoff, error_id, kota ve bozuk yanıt kısmi sonucu bozmaz', async () => {
+  for (const [payload, status, kind, count] of [
+    [{ items: [], backoff: 30, quota_remaining: 299 }, 200, 'rate', 1],
+    [{ error_id: 502, error_message: 'throttle' }, 400, 'rate', 1],
+    [{ error_id: 400, error_message: 'bad' }, 400, 'network', 1],
+    [{ items: [], quota_remaining: 0 }, 200, 'rate', 1],
+    [{ broken: true }, 200, 'network', 1],
+  ]) {
+    const net = eduNet({ 'api.stackexchange.com': () => json(payload, status) });
+    const r = await L.research('Matematik öğretimi', { en: 'Math lessons for students', fetch: net.fetch });
+    const s = r.sources.find((s) => s.id === 'stackexchange');
+    assert.equal(s.ok, false);
+    assert.equal(s.kind, kind);
+    assert.equal(seCalls(net).length, count);
+    if (payload.backoff) assert.ok(s.resetAt > Date.now());
+    assert.ok(r.edu && r.verdict && r.sources.some((s) => s.id === 'github' && s.ok));
+  }
+});
+
+test('research: Stack Exchange başarı önbellekte, backoff önbellek dışında kalır', async () => {
+  const map = new Map(), cache = { get: (k) => map.get(k), set: (k, v) => map.set(k, v) };
+  let blocked = true;
+  const net = eduNet({ 'api.stackexchange.com': () => json(blocked ? { items: [], backoff: 1 } : { items: [], quota_remaining: 298 }) });
+  const opts = { en: 'Programming education', fetch: net.fetch, cache };
+  await L.research('Kodlama eğitimi', opts);
+  blocked = false;
+  await L.research('Kodlama eğitimi', opts);
+  const before = seCalls(net).length;
+  await L.research('Kodlama eğitimi', opts);
+  assert.equal(seCalls(net).length, before);
+  assert.equal(before, 2);
+});
+
+test('eğitim çıktıları: düzey, kaynaklı pedagojik dayanak, Türkiye ve pilot ölçütleri', () => {
+  const r = { ...R({}), idea: 'Ders planı', edu: { level: 'lise', cats: [{ id: 'planning', title: 'Öğretmen asistanı', score: 1 }],
+    evidence: [{ title: 'Planlama deneyi', url: 'https://evidence.example/study', finding: 'Hazırlık süresi azaldı.' }] } };
+  for (const text of [L.buildPrompt(r), L.toMarkdown(r)]) {
+    for (const term of ['Eğitim notları', 'Hedef düzey: lise', 'MEB müfredatı', 'kazanım', 'Öğretmen iş yükü', 'Pedagojik dayanak', 'Planlama deneyi', 'https://evidence.example/study', 'KVKK', 'veli onayı', '2 hafta, 1–2 öğretmen', 'Başarı ölçütü']) assert.ok(text.includes(term), term);
+  }
+  assert.ok(!L.buildPrompt({ ...r, edu: null }).includes('Eğitim notları'));
+  const escaped = L.toMarkdown({ ...r, edu: { cats: [], evidence: [{ title: '[Kaynak]', url: 'https://evidence.example/a)[evil](javascript:alert(1))' }] } });
+  assert.ok(escaped.includes('\\[Kaynak\\]'));
+  assert.ok(!escaped.includes('](javascript:'));
+});
+
+
+test('research: İngilizce eğitim terimleri atlas olmadan tanınır, genel geri bildirim eğitim sayılmaz', async () => {
+  const net = eduNet();
+  for (const en of ['Formative assessment rubric', 'Math tutor', 'Dyslexia accessibility', 'Gamification for literacy']) {
+    const r = await L.research(en, { en, fetch: net.fetch });
+    assert.ok(r.edu, en);
+  }
+  const r = await L.research('Müşteri geri bildirimlerini takip eden araç', { en: 'Customer feedback tracking', fetch: net.fetch });
+  assert.equal(r.edu, null);
+});
+
+test('research: akıllı sıralama Atlas sınırını, gerekçesini ve yinelenen repo işaretini korur', async () => {
+  const atlas = { categories: [{ ...EDU_ATLAS.categories[0], repos: Array.from({ length: 6 }, (_, i) => eduRepo('atlas/planner-' + i)) }] };
+  const net = eduNet({
+    'search/repositories': () => json({ items: [repo({ n: 'atlas/planner-0', d: 'Lesson plan and rubric builder for teachers', s: 300 }),
+      ...Array.from({ length: 8 }, (_, i) => repo({ n: 'web/planner-' + i, d: 'Lesson plan and rubric builder for teachers', s: 300 }))] }),
+    'api.anthropic.com': (url, init) => {
+      const b = JSON.parse(init.body);
+      if (b.model === L.MODELS.plan) return claudeText(JSON.stringify({ repo_queries: ['lesson plan rubric'] }));
+      const list = JSON.parse(b.messages[0].content.split('Repositories:\n')[1]);
+      return claudeText(JSON.stringify(list.map((r) => ({ name: r.name, fit: r.name.startsWith('atlas/') ? 10 : 7, why_tr: 'Ders planı ve rubrik için uygun.' }))));
+    },
+  });
+  const r = await L.research('Öğretmen ders planı rubrik', { en: 'Lesson plan rubric', atlas, claudeKey: 'test', fetch: net.fetch });
+  assert.equal(r.smart, true);
+  assert.equal(r.repos.length, 8);
+  assert.equal(r.repos.filter((r) => r.curated).length, 3);
+  assert.equal(r.repos.filter((r) => r.name === 'atlas/planner-0').length, 1);
+  assert.ok(r.repos.find((r) => r.name === 'atlas/planner-0').curated);
+  assert.ok(r.repos.filter((r) => r.curated).every((r) => r.why.includes('Eğitim Atlası’nda öneriliyor')));
+});
+
+test('research: Stack Exchange kısmi başarı korunur; ağ hatası ve iptal ayrılır', async () => {
+  const net = eduNet({ 'api.stackexchange.com': (url) => new URL(url).searchParams.get('site') === 'academia' ? json({ error_id: 400 }, 400) : json({ quota_remaining: 290, items: [
+    { title: 'Teaching math lessons', link: 'https://matheducators.stackexchange.com/questions/1', score: 4, creation_date: 1700000000 },
+  ] }) });
+  const r = await L.research('Üniversite matematik öğretimi', { en: 'University math lessons', fetch: net.fetch });
+  const s = r.sources.find((s) => s.id === 'stackexchange');
+  assert.equal(s.ok, false);
+  assert.equal(s.partial, true);
+  assert.equal(s.n, 1);
+  assert.ok(r.needs.some((n) => n.source === 'Eğitimci sorusu'));
+  const offline = eduNet({ 'api.stackexchange.com': () => { throw new Error('offline'); } });
+  const failed = await L.research('Matematik öğretimi', { en: 'Math lessons', fetch: offline.fetch });
+  assert.equal(failed.sources.find((s) => s.id === 'stackexchange').kind, 'network');
+  const ctrl = new AbortController();
+  const aborted = eduNet({ 'api.stackexchange.com': () => { ctrl.abort(); throw Object.assign(new Error('aborted'), { name: 'AbortError' }); } });
+  await assert.rejects(L.research('Matematik öğretimi', { en: 'Math lessons', fetch: aborted.fetch, signal: ctrl.signal }), { name: 'AbortError' });
+});
+
+
+for (const translated of [true, false]) test('research: sınıflandırma eğitim değildir; çeviri ' + (translated ? 'başarılı' : 'başarısız'), async () => {
+  for (const word of ['sınıflandırma', 'sınıflandırıcı', 'sınıflandırılmış', 'sınıflama', 'siniflandirma']) {
+    const net = eduNet({ translate_a: (url) => {
+      if (!translated) throw new TypeError('offline');
+      if (url.endsWith('tl=en')) return json([['Image classification model', 'tr']]);
+    } });
+    const r = await L.research('Görüntü ' + word + ' modeli', { atlas: EDU_ATLAS, fetch: net.fetch });
+    assert.equal(r.sources.find((s) => s.id === 'translate').ok, translated);
+    assert.equal(r.edu, null, word);
+    assert.doesNotMatch([r.en, ...r.terms, ...r.queries.repos].join(' '), /classroom|class management/, word);
+    assert.equal(seCalls(net).length, 0, word);
+  }
+});
+
+test('normalizeLicense: ham ve zenginleştirilmiş lisanslar aynı kuralları kullanır', () => {
+  for (const [input, expected] of [
+    [null, { id: '', kind: 'none' }], [undefined, { id: '', kind: 'none' }],
+    ['', { id: '', kind: 'none' }], [{}, { id: '', kind: 'none' }],
+    [' MIT ', { id: 'MIT', kind: 'permissive' }],
+    [{ spdx_id: 'GPL-3.0' }, { id: 'GPL-3.0', kind: 'copyleft' }],
+    [{ spdx_id: 'NOASSERTION' }, { id: '', kind: 'other' }],
+    ['NOASSERTION', { id: '', kind: 'other' }], ['other', { id: 'other', kind: 'other' }],
+    [{ id: '', kind: 'other' }, { id: '', kind: 'other' }],
+    [{ id: 'MIT', kind: 'invalid' }, { id: 'MIT', kind: 'permissive' }],
+    [{ id: '', kind: 'invalid' }, { id: '', kind: 'none' }],
+    ...['permissive', 'copyleft', 'other', 'none'].map((kind) => [{ id: 'custom', kind }, { id: 'custom', kind }]),
+  ]) {
+    const normalized = L.normalizeLicense(input);
+    assert.deepEqual(normalized, expected, JSON.stringify(input));
+    assert.deepEqual(L.normalizeLicense(normalized), expected, 'normalization is idempotent');
+  }
+});
+
+test('research: Atlas lisans türü sıralamada, puanda ve gerekçede korunur', async () => {
+  const other = { ...eduRepo('atlas/other'), license: { id: '', kind: 'other' } };
+  const missing = { ...eduRepo('atlas/missing'), license: { id: '', kind: 'none' } };
+  const atlas = { categories: [{ ...EDU_ATLAS.categories[0], repos: [other, missing] }] };
+  const net = eduNet();
+  const r = await L.research('Ders planı', { en: 'Lesson plan', atlas, fetch: net.fetch });
+  const special = r.repos.find((x) => x.name === other.name);
+  const absent = r.repos.find((x) => x.name === missing.name);
+  assert.deepEqual(special.license, other.license);
+  assert.deepEqual(absent.license, missing.license);
+  assert.ok(special.why.some((w) => w.startsWith('Lisansı özel')));
+  assert.ok(absent.why.some((w) => w.startsWith('Lisans belirtilmemiş')));
+  assert.ok(special.score > absent.score, 'quality uses the same normalized license kind');
+});
+
+test('server tagsFor: teknik öğretmen/öğrenci bağlamı bağımsız eğitim kanıtı gerektirir', () => {
+  const { tagsFor } = require('../server.js');
+  for (const title of [
+    'Teacher-student distillation compresses LLMs',
+    'Self-distillation trains a smaller student model',
+    'Curriculum learning', 'Curriculum-learning improves LLM reasoning',
+    'A teacher model trains the student', 'Student language models get smaller',
+    'Knowledge distillation transfers logits from a teacher to a student',
+    'Curriculum learning improves student performance',
+  ]) assert.ok(!tagsFor({ title }).includes('Eğitim'), title);
+  for (const title of [
+    'AI tools for teachers', 'Students use AI for homework', 'A new school curriculum',
+    'Teacher-student distillation in schools', 'Self-distillation for classroom tutors',
+    'Curriculum learning in K-12 education', 'Distillation helps students study for exams',
+    'Distillation helps teachers prepare lessons',
+    'Distillation ile okul öğrencilerine destek', 'Öğretmenler için curriculum learning',
+    'Eğitimde self-distillation',
+  ]) assert.ok(tagsFor({ title }).includes('Eğitim'), title);
+  assert.ok(tagsFor({ title: 'Teacher-student distillation', summary: 'Teachers prepare lessons.' }).includes('Eğitim'));
+  assert.ok(!tagsFor({ title: 'Teacher-student distillation', cat: 'edu' }).includes('Eğitim'), 'kategori etiketi okul kanıtının yerini tutmaz');
+});
+
+
+// Canlı tarayıcı regresyonları: yerel atlas ve ağsız yanıtlar.
+const BUILT_EDU_ATLAS = require('../public/data/edu-atlas.json');
+const TUTOR_CATEGORY = BUILT_EDU_ATLAS.categories.find((c) => c.id === 'tutor');
+const TUTOR_IDEA = require('../atlas/edu.json').categories.find((c) => c.id === 'tutor').ideas.find((i) => i.title === 'Cevaptan önce bir soru').query;
+const TUTOR_EN = 'An AI teacher teaching concepts to middle school science students through Socratic questions and gradual clues without revealing the answer';
+
+for (const [tr, term, alt] of [
+  ['Sokratik sorular', 'socratic', 'socratic tutor'],
+  ['İpucu', 'hint', 'scaffolding'], ['Kademeli ipuçları', 'hint', 'scaffolding'],
+  ['Cevabı vermeden', 'hint-based tutor', 'without giving answers'],
+  ['Çözümü göstermeden', 'hint-based tutor', 'without giving answers'],
+  ['Fen', 'science', 'STEM education'], ['Kavram yanılgısı', 'misconception', 'conceptual misunderstanding'],
+  ['Çıkış kartı', 'exit ticket', 'exit slip'], ['Yardımsız', 'independent practice', 'unassisted learning'],
+]) test('eğitim anlamı korunur: ' + tr, () => {
+  const en = L._.enFromDict(tr), p = L.planQueries(en, tr);
+  assert.ok(en.includes(term), en);
+  const c = p.concepts.find((c) => c.t === term);
+  assert.ok(c, p.terms.join(', '));
+  assert.ok(c.queryAlts.includes(alt), JSON.stringify(c.queryAlts));
+});
+
+test('tutor planı: genel çiftler elenir, beş seçici terimle sınırlanır', () => {
+  for (const en of [TUTOR_EN, L._.enFromDict(TUTOR_IDEA)]) {
+    const p = L.planQueries(en, TUTOR_IDEA);
+    assert.ok(p.terms.length <= 5, p.terms.join(', '));
+    for (const t of ['socratic', 'hint', 'hint-based tutor', 'science']) assert.ok(p.terms.includes(t), t + ': ' + p.terms.join(', '));
+    assert.doesNotMatch(JSON.stringify(p), /teacher teaching|science student|teaching concept|revealing answer|gradual clue/);
+  }
+  const edited = L.planQueries('Invoice editor', TUTOR_IDEA, true);
+  assert.ok(!edited.terms.includes('socratic'), 'elle düzenlenen terimler Türkçeden tekrar eklenmez');
+});
+
+const tutorCrowd = () => Array.from({ length: 12 }, (_, i) => repo({ n: 'web/science-tutor-' + i,
+  d: 'Science Socratic hint-based tutor with scaffolding and hints for middle school students', s: 50000 }));
+for (const mode of ['crowded', 'empty', 'offline', 'smart', 'smart-low']) test('gerçek atlas: tutor sorgusu ve küratörlü tohumlar — ' + mode, async () => {
+  const net = eduNet({
+    translate_a: (url) => url.endsWith('tl=en') ? json([[TUTOR_EN, 'tr']]) : null,
+    'search/repositories': () => mode === 'offline' ? json({ message: 'limit' }, 403) : json({ items: mode === 'empty' ? [] : tutorCrowd() }),
+    'api.anthropic.com': (url, init) => {
+      const b = JSON.parse(init.body);
+      if (b.model === L.MODELS.plan) return claudeText(JSON.stringify({ repo_queries: ['teacher teaching', 'revealing answer'] }));
+      const list = JSON.parse(b.messages[0].content.split('Repositories:\n')[1]);
+      return claudeText(JSON.stringify(list.map((r) => ({ name: r.name, fit: r.name.startsWith('web/') ? 10 : mode === 'smart-low' ? 1 : 5, why_tr: 'Fikirle kısmi eşleşme.' }))));
+    },
+  });
+  const r = await L.research(TUTOR_IDEA, { atlas: BUILT_EDU_ATLAS, fetch: net.fetch, ...(mode.startsWith('smart') ? { claudeKey: 'test' } : {}) });
+  assertBestOrder(r);
+  assert.equal(r.edu.cats[0].id, 'tutor');
+  const repoQueries = net.gh().filter((c) => c.url.includes('search/repositories')).map((c) => new URL(c.url).searchParams.get('q'));
+  assert.match(repoQueries[0], /^ai tutor socratic in:name,description,topics$/);
+  assert.ok(net.gh().length <= 5, 'GitHub bütçesi korunur');
+  assert.ok(r.terms.length <= 5);
+  assert.ok(repoQueries.every((q) => !/teacher teaching|revealing answer/.test(q)));
+  const curated = r.repos.filter((x) => x.curated);
+  assert.ok(curated.length >= 2 && curated.length <= 3, curated.map((x) => x.name).join(', '));
+  assert.ok(r.repos.length <= 8);
+  const primary = curated.filter((x) => TUTOR_CATEGORY.repos.some((seed) => seed.name === x.name));
+  assert.ok(primary.length >= 2, 'ilk kategoriden en az iki repo: ' + primary.map((x) => x.name));
+  assert.ok(curated.every((x) => x.why.includes('Eğitim Atlası’nda öneriliyor')));
+  if (mode === 'empty' || mode === 'offline') assert.ok(primary.some((x) => x.name === 'HKUDS/DeepTutor'));
+  if (mode === 'crowded') assert.equal(r.repos.length, 8, 'yer ayırma diğer ilgili sonuçları korur');
+  if (mode === 'empty') assert.ok(curated.every((x) => !x.best), 'kategori eşleşmesi tam fikir kapsamı iddia etmez');
+  assert.equal(seCalls(net).length, 0, 'fen için math/academia sorgulanmaz');
+});
+
+test('gerçek atlas: yinelenen arama kaydı kategori bilgisini korur; alakasız tohum elenir', async () => {
+  const atlas = { ...BUILT_EDU_ATLAS, categories: [{ ...TUTOR_CATEGORY, repos: [...TUTOR_CATEGORY.repos,
+    { ...eduRepo('atlas/weather', 'Weather forecast'), topics: [] }] }] };
+  const net = eduNet({ 'search/repositories': () => json({ items: [repo({ n: 'HKUDS/DeepTutor', d: TUTOR_CATEGORY.repos[0].desc, s: 47465 }), ...tutorCrowd()] }) });
+  const r = await L.research(TUTOR_IDEA, { en: TUTOR_EN, atlas, fetch: net.fetch });
+  assert.equal(r.repos.filter((x) => x.name === 'HKUDS/DeepTutor').length, 1);
+  assert.ok(r.repos.find((x) => x.name === 'HKUDS/DeepTutor').curated);
+  assert.ok(r.repos.filter((x) => x.curated).length >= 2);
+  assert.ok(!r.repos.some((x) => x.name === 'atlas/weather'));
+});
+
+test('verdict: en çok iki eksik kavram listeler', () => {
+  const v = L.verdict(R({ repos: [rr({ cov: ['ödev'], miss: ['ipucu', 'Sokratik yaklaşım', 'fen', 'öğretmen', 'sınıf'] })] }));
+  assert.match(v.text, /ipucu ve Sokratik yaklaşım kısmını kendin eklemelisin/);
+  assert.doesNotMatch(v.text, /fen|öğretmen|sınıf/);
+});
+
+test('eğitimci araması: fen/genel okul atlanır; matematik, kodlama ve üniversite ayrılır', () => {
+  for (const [en, sites] of [
+    ['Middle school science misconceptions and hints', []], ['Lesson plan for teachers', []],
+    ['Math misconceptions with exit tickets', ['matheducators']],
+    ['Programming education with autograder', ['cseducators']],
+    ['Computer science tutoring', ['cseducators']],
+    ['University formative assessment', ['academia']],
+    ['Higher ed feedback', ['academia']],
+    ['University math feedback', ['matheducators', 'academia']],
+    ['Math and programming education', ['matheducators', 'cseducators']],
+  ]) {
+    const p = L.planQueries(en, '', true);
+    assert.deepEqual(L._.educatorSearch(p, en).sites, sites, en);
+  }
+  const p = L.planQueries(TUTOR_EN, TUTOR_IDEA);
+  assert.equal(L._.educatorSearch(p, TUTOR_EN).query.split(' ').includes('teacher'), false);
+});
+
+test('eğitimci soruları: iki seçici kavram, relevance sıralaması, ilgisiz popüler sorular elenir', async () => {
+  const en = 'University math rubric and misconception';
+  const net = eduNet({ 'api.stackexchange.com': (url) => {
+    const site = new URL(url).searchParams.get('site');
+    return json({ items: [
+      { title: 'Rubric for a math misconception?', link: 'https://' + site + '.stackexchange.com/questions/1', score: 3 },
+      { title: 'Teaching a class meant to inflate GPA of student athletes', link: 'https://' + site + '.stackexchange.com/questions/2', score: 9999 },
+      { title: 'Is web presence important for researchers?', link: 'https://' + site + '.stackexchange.com/questions/3', score: 9999 },
+      { title: 'Rubric alone', link: 'https://' + site + '.stackexchange.com/questions/4', score: 9999 },
+    ], quota_remaining: 200 });
+  } });
+  const r = await L.research('Üniversite matematik rubrik ve kavram yanılgısı', { en, fetch: net.fetch });
+  for (const c of seCalls(net)) {
+    const params = new URL(c.url).searchParams;
+    assert.equal(params.get('sort'), 'relevance');
+    assert.equal(params.get('q'), 'rubric misconception');
+  }
+  assert.equal(r.needs.length, 2);
+  assert.ok(r.needs.every((n) => n.text === 'Rubric for a math misconception?'));
+});
+
+test('eğitimci soruları: bir kavram + ayrı kategori anahtarı kabul edilir, eşleşmeyenler doldurulmaz', async () => {
+  const atlas = { categories: [{ id: 'math', title: 'Matematik', keywords: ['math', 'geometry'], tr_keywords: ['matematik'] }] };
+  const net = eduNet({ 'api.stackexchange.com': () => json({ items: [
+    { title: 'Geometry rubric?', link: 'https://matheducators.stackexchange.com/questions/1', score: 1 },
+    { title: 'Teaching math', link: 'https://matheducators.stackexchange.com/questions/2', score: 999 },
+    { title: 'Rubric rubrics', link: 'https://matheducators.stackexchange.com/questions/3', score: 999 },
+  ] }) });
+  const r = await L.research('Matematik rubrik', { en: 'Math rubric', atlas, fetch: net.fetch });
+  assert.deepEqual(r.needs.map((n) => n.text), ['Geometry rubric?']);
+  const empty = eduNet({ 'api.stackexchange.com': () => json({ items: [
+    { title: 'Is web presence important for researchers?', link: 'https://academia.stackexchange.com/questions/4', score: 999 },
+  ] }) });
+  const none = await L.research('Üniversite rubrik', { en: 'University rubric', fetch: empty.fetch });
+  assert.deepEqual(none.needs, []);
+  assert.equal(none.sources.find((s) => s.id === 'stackexchange').n, 0);
+  const p = L.planQueries('Math feedback', '', true);
+  const nested = { ...p.domain[0], t: 'math feedback', toks: ['math', 'feedback'], alts: [{ s: ['math', 'feedback'], w: 1 }] };
+  assert.equal(L._.educatorRelevant('Math feedback', [nested], ['math feedback']), false, 'aynı kavram kategori anahtarıyla iki kere sayılmaz');
+});
+
+const EDUCATION_NEGATIVES = [
+  { title: 'Grok vs. Dot vs. Muse vs. Claude Duet: which one crushes the competition?', summary: 'A personal-agent benchmark for people. Education and learning.' },
+  { title: 'Anyone else building a boring, non-AI project right now?', summary: 'Reddit post about software projects and learning.' },
+  { title: 'The sleep framework: A new way for LLMs to retain knowledge in continual learning', summary: 'Education Innovation', cat: 'edu' },
+  { title: "😺 OpenAI's big day brought a disproof and Terra", summary: 'Most courses get built behind closed doors, then dropped on students. The Neuron Academy.' },
+  { title: 'Using Codex for education at Dagster Labs', summary: 'Documentation for developers.' },
+  { title: 'OpenAI, canlı internet erişimini model eğitiminden çıkarıyor', summary: 'Modellerini eğitirken eğitim ve değerlendirme verileri kullanıyor.' },
+  { title: 'Brown student maps the hidden global labor powering AI' },
+  { title: 'Why Engineers Should Brave Capitol Hill', summary: 'Technology education and research funding.' },
+  ...['70% Of Internet Hacked By AI', 'The NEW Way to Build a Second Brain…', 'The Last AI Roadmap Video…'].map((title) => ({ title, cat: 'video', summary: 'Nick Saraev: Join Maker School. skool.com course resources and curriculum. Teachers and students in the classroom.' })),
+  { title: 'I built an app that makes $2K PER DAY', cat: 'video', summary: 'Starter Story: Join the course. Students and teachers learn in school.' },
+  { title: 'New model eğitimi approach', summary: 'Eğitim verisi, ön eğitim ve eğitilmiş modeller.' },
+  { title: 'LLM modellerini eğitirken kullanılan yeni yöntem', cat: 'edu' },
+  { title: 'Yapay zeka için eğitim verisi toplama', cat: 'edu' },
+  { title: 'Ön eğitim ile eğitilmiş dil modelleri', cat: 'edu' },
+  { title: 'Distillation improves LLMs', summary: 'Knowledge distillation transfers logits from a teacher to a student.' },
+  { title: 'Student model learns from a teacher model', summary: 'Teacher language models and student models use distillation.' },
+  { title: 'A neutral product announcement', summary: 'Join Maker School. Course resources, curriculum, The Neuron Academy and Education Innovation.' },
+  { title: 'A neutral product announcement', summary: 'Teachers, teachers and more teachers.' },
+  { title: 'A neutral product announcement', type: 'video', summary: 'School teachers support students in classrooms.' },
+  { title: 'A neutral product announcement', url: 'https://www.youtube.com/watch?v=abc', summary: 'School teachers support students in classrooms.' },
+];
+const EDUCATION_POSITIVES = [
+  { title: 'Yeni EBA ile okullara yapay zekâ destekli altyapı geliyor' },
+  { title: 'Gerçek Öğretmenlerin Yerini Yapay Zeka Alabilir mi?…', cat: 'video' },
+  { title: "AI use leads UC Berkeley math professor to see 'no point' in grading homework" },
+  { title: 'Koç Topluluğu 100. yılında: Sergilerden yapay zeka eğitimine uzanan projeler' },
+  { title: "Google Cloud ve TÜBİSAD'dan yapay zeka eğitimi için yeni adım" },
+  { title: 'How school districts are helping teachers use AI', source: 'EdSurge' },
+  { title: 'K-12 classrooms rethink homework in the age of AI', source: 'The Hechinger Report' },
+  { title: 'Eğitimde yapay zekâ için yeni dönem' },
+  { title: 'Yetişkinler için yapay zekâ kursu ve eğitimi başlıyor' },
+  { title: 'A new pilot takes shape', summary: 'Teachers work with students in school classrooms.' },
+  { title: 'Yeni pilot başladı', summary: 'Öğretmenler okul öğrencilerine destek oluyor.' },
+  { title: 'Student models support classroom teachers', cat: 'edu' },
+];
+for (const [expected, items] of [[false, EDUCATION_NEGATIVES], [true, EDUCATION_POSITIVES]]) {
+  for (const item of items) test('Eğitim etiketi ' + (expected ? 'korunur: ' : 'elenir: ') + item.title + (item.type || item.url || ''), () => {
+    assert.equal(require('../server.js').tagsFor(item).includes('Eğitim'), expected, JSON.stringify(item));
+  });
+}
+
+
+test('Atlas için ayrılan yerler yerel eşleşmeler eklenirken de korunur', () => {
+  const p = L.planQueries('Socratic tutor invoice e-fatura', 'e-fatura', true);
+  const primary = TUTOR_CATEGORY.repos.map((r) => ({ ...r, curated: true, curatedTop: true, curatedKeywords: TUTOR_CATEGORY.keywords }));
+  const crowd = Array.from({ length: 10 }, (_, i) => repo({ n: 'web/tutor-invoice-' + i, d: 'Socratic tutor invoice', s: 50000 }));
+  const local = Array.from({ length: 2 }, (_, i) => repo({ n: 'local/efatura-' + i, d: 'e-fatura GIB UBL TR invoicing for schools', s: 20 }));
+  const ranked = L.rankRepos([...crowd, ...primary, ...local], p);
+  assert.equal(ranked.length, 8);
+  assert.ok(ranked.filter((r) => r.curatedTop).length >= 2);
+  assert.equal(ranked.filter((r) => r.local).length, 2);
+});
+
+
+// Eğitim kapısı sorgu üretiminden bağımsızdır: API alakasız sonuç döndürebilir.
+test('edu anchor: eğitim sözcükleri, Türkçe ekler ve bileşik adlar; teknik learning tek başına yetmez', () => {
+  for (const anchor of ['tutor', 'tutoring', 'education', 'educational', 'edtech', 'learning', 'learner', 'student', 'teacher', 'teaching',
+    'school', 'classroom', 'course', 'lesson', 'quiz', 'exam', 'study', 'flashcard', 'homework', 'curriculum', 'pedagogy',
+    'k-12', 'mooc', 'lms', 'moodle', 'e-learning', 'kids learning', 'children learning', 'DeepTutor',
+    'Öğrencilerin', 'Öğretmenler', 'ortaokul', 'eğitim', 'öğrenme', 'öğreten', 'dersler', 'sınavlar', 'ödevler', 'müfredat']) {
+    assert.ok(L._.hasEduAnchor(anchor), anchor);
+  }
+  for (const text of ['hint', 'science', 'ai', 'socratic', 'machine learning', 'deep-learning', 'reinforcement_learning',
+    'MachineLearning and DeepLearning', 'machine learning and reinforcement learning', 'schooling-browser', 'studentized statistics', 'classification']) {
+    assert.equal(L._.hasEduAnchor(text), false, text);
+  }
+  assert.ok(L._.hasEduAnchor('Machine learning course'));
+  assert.ok(L._.hasEduAnchor('Deep learning for classroom teachers'));
+  assert.ok(L._.hasEduAnchor('Reinforcement learning tutor'));
+});
+
+test('edu gate: repo sahibi, URL ve README sayılmaz; ad/açıklama/topics yeterlidir; Atlas geçebilir', () => {
+  const p = L.planQueries('Socratic science hints for students');
+  const r = (n, d, t) => repo({ n, d, t, s: 50000 });
+  const out = L.rankRepos([
+    { ...r('education/hint', 'Science Socratic hints'), readme: 'Education tutor for students', homepage: 'https://school.example' },
+    r('web/deep-learning-hint', 'Science Socratic machine learning and deep learning'),
+    r('web/SocraticTutor', 'Science Socratic hints'),
+    r('web/description', 'Science Socratic hints for students'),
+    r('web/topic', 'Science Socratic hints', ['education']),
+    { ...r('atlas/socratic', 'Socratic science hints'), curated: true, curatedTop: true, curatedKeywords: ['socratic'] },
+  ], p);
+  assert.deepEqual(new Set(out.map((r) => r.name)), new Set(['web/SocraticTutor', 'web/description', 'web/topic', 'atlas/socratic']));
+  const ordinary = L.rankRepos([r('education/hint', 'Science Socratic hints')], { ...p, edu: false });
+  assert.equal(ordinary.length, 1, 'kapı yalnızca eğitim modunda uygulanır');
+});
+
+const LIVE_EDU_REPOS = [
+  repo({ n: 'smashburger-dev/socratic-workshop', d: 'Socratic workshop for teaching science through questions', s: 22 }),
+  repo({ n: 'panaversity/learn-modern-ai-python', d: 'Learn modern AI Python, machine learning and deep learning', s: 879 }),
+  repo({ n: 'webhintio/hint', d: 'A hinting engine for the web', s: 3701 }),
+  repo({ n: 'ossc-db/pg_hint_plan', d: 'Give PostgreSQL planner hints', s: 928 }),
+  repo({ n: 'WICG/ua-client-hints', d: 'User-Agent Client Hints', s: 623 }),
+  repo({ n: 'AlfredoSequeida/hints', d: 'Keyboard navigation hints for your computer', s: 1387 }),
+  ...TUTOR_CATEGORY.repos.filter((r) => ['HKUDS/DeepTutor', 'shayan-shojaei/open-tutor'].includes(r.name))
+    .map((r) => ({ ...repo({ n: r.name, d: r.desc, s: r.stars, t: r.topics }), license: { spdx_id: r.license.id } })),
+];
+for (const smart of [false, true]) test('live edu regression: webhint ve teknik hints sonuçları elenir; smart=' + smart, async () => {
+  const badNeed = { ...issue(900, 'Feature request: Internet Explorer hint support', 100), repository_url: 'https://api.github.com/repos/webhintio/hint' };
+  const goodNeed = { ...issue(901, 'Feature request: science tutor hints for students', 5), repository_url: 'https://api.github.com/repos/smashburger-dev/socratic-workshop' };
+  const net = eduNet({
+    translate_a: (url) => url.endsWith('tl=en') ? json([[TUTOR_EN, 'tr']]) : null,
+    'search/repositories': () => json({ items: LIVE_EDU_REPOS }),
+    'search/issues': () => json({ items: [badNeed, goodNeed] }),
+    'api.anthropic.com': (url, init) => {
+      const b = JSON.parse(init.body);
+      if (b.model === L.MODELS.plan) return claudeText(JSON.stringify({ repo_queries: ['hint', 'science', 'ai'], hn_queries: ['socratic'], need_terms: ['hint'] }));
+      const list = JSON.parse(b.messages[0].content.split('Repositories:\n')[1]);
+      assert.ok(list.every((r) => !/webhint|pg_hint_plan|ua-client-hints|AlfredoSequeida/.test(r.name)));
+      return claudeText(JSON.stringify(list.map((r) => ({ name: r.name, fit: r.name.startsWith('smashburger') ? 10 : 7 }))));
+    },
+  });
+  const r = await L.research(TUTOR_IDEA, { atlas: BUILT_EDU_ATLAS, fetch: net.fetch, ...(smart ? { claudeKey: 'test' } : {}) });
+  assertBestOrder(r);
+  assert.equal(r.edu.cats[0].id, 'tutor');
+  assert.ok(r.repos.some((x) => x.name === 'HKUDS/DeepTutor'));
+  assert.ok(r.repos.some((x) => x.name === 'shayan-shojaei/open-tutor'));
+  assert.ok(r.repos.every((x) => !/webhint|pg_hint_plan|ua-client-hints|AlfredoSequeida|learn-modern-ai-python/.test(x.name)));
+  assert.equal(r.repos[0].name, 'HKUDS/DeepTutor');
+  assert.ok(!r.verdict.repo || r.repos.some((x) => x.name === r.verdict.repo && (x.curated || L._.hasEduAnchor(x.name, x.desc, ...x.topics))));
+  assert.doesNotMatch(r.verdict.text, /webhint|pg_hint_plan|ua-client-hints|AlfredoSequeida/);
+  assert.ok(r.needs.some((n) => n.text.includes('science tutor')));
+  assert.ok(r.needs.every((n) => !/webhint|Internet Explorer/.test(n.text + n.where)));
+  assert.ok(net.gh().length <= 5);
+  const searches = net.gh().map((c) => new URL(c.url).searchParams.get('q'));
+  for (const q of searches) {
+    const text = q.replace(/\b[\w-]+:\S+/g, '').trim();
+    assert.ok(L._.hasEduAnchor(text), q);
+    assert.ok(text.split(/\s+/).length >= 2, q);
+  }
+});
+
+test('edu queries: seyrek sonuç genişletmesi ve topics geri beslemesi eğitim koşulunu korur', async () => {
+  for (const crowded of [false, true]) {
+    const net = eduNet({ 'search/repositories': () => json({ items: crowded ? Array.from({ length: 5 }, (_, i) =>
+      repo({ n: 'web/hint-tutor-' + i, d: 'Science Socratic hint-based tutor with scaffolding and hints for students', s: 5000, t: ['scaffolding'] })) : [] }) });
+    const r = await L.research(TUTOR_IDEA, { en: 'Science Socratic hint-based tutor hints for students', fetch: net.fetch });
+    assert.ok(r.edu);
+    const queries = net.gh().map((c) => new URL(c.url).searchParams.get('q'));
+    assert.ok(queries.length >= 3 && queries.length <= 5);
+    for (const q of queries) assert.ok(L._.hasEduAnchor(q.replace(/\b[\w-]+:\S+/g, '')), q);
+    if (crowded) assert.ok(queries.some((q) => q.includes('topic:scaffolding')), queries.join('; '));
+    else assert.ok(queries.some((q) => /^(?:hint|science|socratic) (?:tutor|education) in:/.test(q)), 'genişletme çıplak hint değildir: ' + queries.join('; '));
+  }
+});
+
+test('edu gate: bloklar, ürün başlıkları ve HN alıntıları da eğitim kanıtı gerektirir', async () => {
+  const net = eduNet({ 'search/repositories': (url) => {
+    const q = new URL(url).searchParams.get('q');
+    return json({ items: q.includes('whatsapp api') ? [
+      repo({ n: 'web/whatsapp-infra', d: 'WhatsApp API for science Socratic hints', s: 5000 }),
+      repo({ n: 'web/whatsapp-school', d: 'WhatsApp API for classroom science tutoring', s: 5000 }),
+    ] : [] });
+  } });
+  const r = await L.research('Öğrenciler için WhatsApp Sokratik fen ipuçları', { en: 'Science Socratic hint tutor through WhatsApp for students', fetch: net.fetch });
+  assert.deepEqual(r.blocks.map((x) => x.name), ['web/whatsapp-school']);
+  for (const q of net.gh().map((c) => new URL(c.url).searchParams.get('q'))) assert.ok(L._.hasEduAnchor(q.replace(/\b[\w-]+:\S+/g, '')), q);
+  const p = L.planQueries(TUTOR_EN, TUTOR_IDEA);
+  const product = (id, title, url) => ({ objectID: id, title: 'Show HN: ' + title, url, points: 999, created_at: iso(1) });
+  const products = L._.productsFrom([
+    product('1', 'Science Socratic hints', 'https://education.example'),
+    product('2', 'Science Socratic hints tutor', 'https://example.org'),
+  ], p);
+  assert.deepEqual(products.map((x) => x.title), ['Science Socratic hints tutor']);
+  const needs = L.extractNeeds([
+    hit(801, 'I wish there was a science Socratic hints app for my browser.'),
+    hit(802, 'I wish there was a science Socratic hints tutor app for my students.'),
+  ], p);
+  assert.equal(needs.length, 1);
+  assert.match(needs[0].text, /students/);
+});
+
+test('edu gate: yalnızca Atlas eşleşmesiyle açılan eğitim modu da uygulanır', async () => {
+  const atlas = { categories: [{ id: 'atlas-only', title: 'Atlas bağlamı', tr_keywords: ['özel bağlam'], keywords: ['invoice'], repos: [] }] };
+  const net = eduNet({ 'search/repositories': () => json({ items: [repo({ n: 'web/invoice', d: 'Invoice editor', s: 50000 })] }) });
+  const r = await L.research('Özel bağlam', { en: 'Invoice editor', atlas, fetch: net.fetch });
+  assert.ok(r.edu);
+  assert.equal(r.repos.length, 0);
+  assert.ok(net.gh().every((c) => L._.hasEduAnchor(new URL(c.url).searchParams.get('q').replace(/\b[\w-]+:\S+/g, ''))));
+});
+
+test('edu prior: Atlas popülerlikten güçlüdür; iki ek kavram ve daha iyi kalite onu aşabilir', () => {
+  const p = L.planQueries(TUTOR_EN, TUTOR_IDEA);
+  const primary = { ...eduRepo('atlas/tutor', 'Hint tutor for students'), curated: true, curatedTop: true, curatedKeywords: ['tutor'] };
+  const equal = repo({ n: 'web/popular-tutor', d: 'Hint tutor for students', s: 100000 });
+  const stronger = repo({ n: 'web/socratic-tutor', d: 'Science Socratic hint-based tutor with hints for students', s: 100000 });
+  const ranked = L.rankRepos([equal, primary], p);
+  assert.equal(ranked[0].name, primary.name, 'yıldız ve best rozeti Atlas önceliğini aşamaz');
+  const better = L.rankRepos([stronger, primary], p);
+  assert.equal(better[0].name, stronger.full_name);
+  const seed = better.find((r) => r.curated);
+  assert.ok(better[0].coverage >= seed.coverage + 2);
+  assert.ok(better[0].quality >= seed.quality);
+  const stale = { ...stronger, pushed_at: iso(800), license: null };
+  assert.equal(L.rankRepos([stale, primary], p)[0].name, primary.name, 'fazla kavram kalite kaybını tek başına örtemez');
+});
+
+test('edu verdict: eğitim dışı ve tek kavramlı depolar güçlü görünse de önerilmez', () => {
+  const solid = { ...L.rankRepos([LIVE_EDU_REPOS[2]], { ...L.planQueries('Hint'), edu: false })[0],
+    name: 'webhintio/hint', desc: 'Hinting engine for the web', topics: [], mainOk: true, bodyMainOk: true,
+    reviewOk: true, bestOk: true, rel: 1, score: 1, stars: 50000, pushed: Date.now(), license: { id: 'MIT', kind: 'permissive' }, cov: ['hint', 'science'], miss: [] };
+  assert.equal(L.verdict(R({ edu: {}, repos: [solid] })).repo, undefined);
+  assert.equal(L.verdict(R({ edu: {}, repos: [{ ...solid, name: 'web/hint-tutor', desc: 'Hint tutor', coverage: 1, miss: ['science'] }] })).repo, undefined);
+  assert.equal(L.verdict(R({ edu: {}, repos: [{ ...solid, name: 'web/science-tutor', desc: 'Science hint tutor', coverage: 2 }] })).repo, 'web/science-tutor');
+});
+
+test('offline Atlas değerlendirmesi: 39 query eğitim modunda, en az iki eğitim çapalı repo sorgusu', (t) => {
+  const ideas = require('../atlas/edu.json').categories.flatMap((c) => c.ideas);
+  assert.equal(ideas.length, 39);
+  for (const { query } of ideas) {
+    const en = L._.enFromDict(query), p = L.planQueries(en, query);
+    assert.ok(L._.education(query, en, BUILT_EDU_ATLAS), query);
+    assert.ok(p.edu, query);
+    const repos = p.repoQ.map((q) => q.terms.join(' '));
+    assert.ok(repos.filter((q) => L._.hasEduAnchor(q)).length >= 2, query + ': ' + repos.join('; '));
+    const searches = [...repos, ...p.broadQ, ...p.hnQ, ...p.needQ, ...(p.block?.terms || [])];
+    for (const q of searches) {
+      assert.ok(L._.hasEduAnchor(q), query + ': ' + q);
+      assert.ok(q.trim().split(/\s+/).length >= 2, query + ': ' + q);
+    }
+    assertCleanTerms(p, query);
+    t.diagnostic(query + ' → terms: [' + p.terms.join(', ') + '] → ' + repos.join(' | '));
+  }
+});
+
+// Terim öbekleri yalnızca içerik sözlüğündeki isim/sıfatlardan kurulmalı.
+const TERM_JUNK = /\b(?:produce[sd]?|producing|according|accordance|trial|share[sd]?|sharing|based|using|help(?:s|ed|ing)?|prepare[sd]?|preparing|generate[sd]?|generating|with|from|for|through)\b/;
+const LGS_IDEA = require('../atlas/edu.json').categories.find((c) => c.id === 'exam-prep').ideas[0].query;
+const TEACHER_IDEA = require('../atlas/edu.json').categories.find((c) => c.id === 'teacher-assistant').ideas[0].query;
+const LGS_EN = 'An application that produces repetition targets that can be shared with the teacher by analyzing LGS trial errors according to the topic and cause of error';
+const TEACHER_EN = 'An AI assistant that prepares editable lesson plans and exit tickets for teachers in accordance with MEB learning outcomes and lesson duration';
+const assertCleanTerms = (p, context) => {
+  for (const term of p.terms) assert.doesNotMatch(term.replace(/hint-based/g, 'hint'), TERM_JUNK, context + ': ' + term);
+  for (const c of p.concepts) {
+    assert.ok(c.toks.every((t) => !L._.termNoise(t)), context + ': ' + c.t);
+    if (c.toks.length > 1) assert.ok(c.toks.every(L._.contentTerm), context + ': ' + c.t);
+  }
+};
+const assertBestOrder = (r) => {
+  const best = r.repos.filter((x) => x.best);
+  assert.ok(best.length <= 1);
+  if (best.length) assert.equal(r.repos[0], best[0], 'best rozeti son sıralamada ilk repoda');
+  if (r.verdict?.repo) assert.equal(r.verdict.repo, r.repos[0].name, 'karar ilk repoyu önerir');
+  assert.ok(r.repos.every((x) => !x.best || !x.curated || x.stars >= 100));
+};
+
+for (const tr of ['deneme', 'Deneme sınavı', 'LGS deneme', 'TYT denemesi']) test('deneme kavramı trial çevirisini düzeltir: ' + tr, () => {
+  const p = L.planQueries('A trial application', tr);
+  const c = p.concepts.find((c) => c.t === 'mock exam');
+  assert.ok(c, p.terms.join(', '));
+  assert.ok(c.queryAlts.includes('practice test'));
+  assert.ok(!p.concepts.some((c) => /\btrial\b/.test(c.t)));
+  assertCleanTerms(p, tr);
+});
+for (const tr of ['yanlışlar', 'Yanlış analizi', 'hata nedeni', 'konu analizi', 'tekrar hedefi']) test('sınav analizinin yerel anlamı korunur: ' + tr, () => {
+  const term = tr.startsWith('konu') ? 'topic analysis' : tr.startsWith('tekrar') ? 'review plan' : 'error analysis';
+  const p = L.planQueries(L._.enFromDict(tr), tr);
+  const c = p.concepts.find((c) => c.t === term);
+  assert.ok(c, p.terms.join(', '));
+  if (term === 'error analysis') for (const alt of ['wrong answers', 'mistake analysis']) assert.ok(c.queryAlts.includes(alt));
+  assertCleanTerms(p, tr);
+});
+
+test('LGS ve öğretmen asistanı: canlı çeviri fiilleri terimleri kirletmez', () => {
+  for (const [tr, en, expected] of [
+    [LGS_IDEA, LGS_EN, ['mock exam', 'error analysis', 'review plan', 'exam prep']],
+    [TEACHER_IDEA, TEACHER_EN, ['lesson plan', 'learning outcomes', 'exit ticket']],
+  ]) {
+    const p = L.planQueries(en, tr);
+    assertCleanTerms(p, tr);
+    for (const term of expected) assert.ok(p.concepts.some((c) => c.toks.includes(term)), term + ': ' + p.terms.join(', '));
+    assert.ok(p.repoQ.filter((q) => L._.hasEduAnchor(q.terms.join(' '))).length >= 2);
+  }
+});
+
+test('içerik sözlüğü: bilinmeyen sözcükler ve işlev/fiil sözcükleri serbest bigram kuramaz', () => {
+  for (const token of ['produce', 'produces', 'producing', 'according', 'accordance', 'share', 'sharing', 'based', 'using', 'help', 'helping', 'wibble']) {
+    const p = L.planQueries('Invoice ' + token + ' tracking');
+    assert.ok(!p.concepts.some((c) => c.toks.length > 1 && c.toks.includes(token)), token);
+    assertCleanTerms(p, token);
+  }
+  for (const term of ['patient record', 'book club', 'care plan', 'nutrition plan']) {
+    const p = L.planQueries(term);
+    assert.ok(p.terms.includes(term), term);
+  }
+});
+
+for (const smart of [false, true]) test('Atlas best: benimsenmiş küratörlü repo kapsamı doğrulanınca ilk sırada; smart=' + smart, async () => {
+  const strongDesc = 'Science Socratic hint-based tutor with scaffolding and hints for middle school students';
+  const items = [
+    repo({ n: 'web/workshop', d: strongDesc, s: 90000 }),
+    repo({ n: 'HKUDS/DeepTutor', d: strongDesc, s: 47465 }),
+    repo({ n: 'LEARNableLabs/opentutor', d: strongDesc, s: 1 }),
+  ];
+  const net = eduNet({
+    translate_a: (url) => url.endsWith('tl=en') ? json([[TUTOR_EN, 'tr']]) : null,
+    'search/repositories': () => json({ items }),
+    'api.anthropic.com': (url, init) => {
+      const b = JSON.parse(init.body);
+      if (b.model === L.MODELS.plan) return claudeText('{}');
+      const list = JSON.parse(b.messages[0].content.split('Repositories:\n')[1]);
+      return claudeText(JSON.stringify(list.map((r) => ({ name: r.name, fit: r.name.includes('opentutor') ? 10 : 8 }))));
+    },
+  });
+  const r = await L.research(TUTOR_IDEA, { atlas: BUILT_EDU_ATLAS, fetch: net.fetch, ...(smart ? { claudeKey: 'test' } : {}) });
+  assertBestOrder(r);
+  assert.equal(r.repos[0].name, 'HKUDS/DeepTutor');
+  assert.equal(r.repos[0].best, true);
+  assert.ok(r.repos[0].coverage >= 2 && r.repos[0].bodyMainOk);
+  assert.equal(r.verdict.repo, 'HKUDS/DeepTutor');
+  const tiny = r.repos.find((x) => x.name === 'LEARNableLabs/opentutor');
+  assert.ok(tiny && !tiny.best);
+});
+
+test('Atlas best: kategori önceliği kapsamı olmayan tohuma rozet vermez veya rozeti aşağı itemez', async () => {
+  const net = eduNet({ translate_a: (url) => url.endsWith('tl=en') ? json([[TUTOR_EN, 'tr']]) : null,
+    'search/repositories': () => json({ items: [repo({ n: 'web/socratic-workshop',
+    d: 'Science Socratic hint-based tutor with scaffolding and hints for students', s: 5000 })] }) });
+  const r = await L.research(TUTOR_IDEA, { atlas: BUILT_EDU_ATLAS, fetch: net.fetch });
+  assertBestOrder(r);
+  assert.equal(r.repos[0].name, 'web/socratic-workshop');
+  assert.equal(r.repos[0].best, true);
+  assert.equal(r.verdict.repo, r.repos[0].name, JSON.stringify({ verdict: r.verdict, repo: r.repos[0] }));
+  const deep = r.repos.find((x) => x.name === 'HKUDS/DeepTutor');
+  assert.ok(deep && !deep.best && !deep.bestOk, 'Atlas tek başına kapsam kanıtı değildir');
+});
+
+test('deneme bağlamı: öğrencinin tek denemesi deneme sınavı değildir', () => {
+  const tr = 'Moodle ödevlerinde öğrenci denemesinden sonra ipucu';
+  const p = L.planQueries(L._.enFromDict(tr), tr);
+  assert.ok(!p.concepts.some((c) => c.t === 'mock exam'));
+  assert.ok(p.concepts.some((c) => c.t === 'hint'));
+});
+
+test('Atlas best: kısmi karar benimsenmiş küratörlü temeli yalnızca popülerlik için değiştirmez', () => {
+  const p = L.planQueries('Lesson plan and rubric and math for teachers');
+  const desc = 'Lesson plan and rubric builder for teachers';
+  const ranked = L.rankRepos([
+    repo({ n: 'web/popular', d: desc, s: 100000 }),
+    { ...eduRepo('atlas/planner', desc), curated: true, curatedTop: true, curatedKeywords: ['lesson plan'] },
+  ], p);
+  assert.ok(ranked[0].best && ranked[0].curated);
+  assert.ok(ranked[0].coverage >= 2 && ranked[0].miss.length);
+  const result = { edu: {}, repos: ranked, products: [], sources: [] };
+  result.verdict = L.verdict(result);
+  assertBestOrder(result);
+  assert.equal(result.verdict.repo, 'atlas/planner');
+});
+
+test('verdict: best kapsam denetimini geçmeyen repo önerilmez', () => {
+  assert.equal(L.verdict(R({ repos: [rr({ bestOk: false })] })).repo, undefined);
+});
+
+
+// Canlı küme: kullanıcı yalnızca repo adını verdiğinde fixture sahibi 'live' kullanılır.
+const LIVE_EXAM_REPOS = [
+  repo({ n: 'nastaso/cloudcertprep', d: 'AWS Cloud Practitioner mock exam and exam prep with error analysis and review plan by subject', s: 800 }),
+  repo({ n: 'turer73/bilge-arena', d: 'YKS sınav hazırlığı ve oyunlaştırılmış soru çözümü', s: 0, lic: null, t: ['yks'] }),
+  repo({ n: 'live/claude-architect-exam-guide', d: 'Certified Claude architect exam prep and mock exam guide', s: 500 }),
+  repo({ n: 'sailor-sh/CK-X', d: 'CKAD/CKA mock exams and exam prep', s: 1200 }),
+  repo({ n: 'live/kubernetes-security-kcsa-mock', d: 'Kubernetes security KCSA mock exams', s: 300 }),
+  repo({ n: 'live/CKA-Exam-Practice-Questions', d: 'CKA exam prep practice questions', s: 900 }),
+];
+const STUDENT_EXAM_REPOS = [
+  repo({ n: 'students/school-exam-practice', d: 'Mock exam and exam prep for school students with error analysis, review plan and subject practice', s: 600 }),
+  repo({ n: 'students/lgs-practice', d: 'LGS sınav: high school entrance mock exam and exam prep, error analysis, review plan by subject', s: 300, t: ['lgs'] }),
+];
+const EXAM_CATEGORY = BUILT_EDU_ATLAS.categories.find((c) => c.id === 'exam-prep');
+const LIVE_EXAM_ATLAS = { categories: [{ ...EXAM_CATEGORY, repos: EXAM_CATEGORY.repos.filter((r) => r.name === 'turer73/bilge-arena') }] };
+
+test('exam level: Türkçe ve İngilizce okul düzeyleri sorgulara taşınır; KPSS yetişkin kalır', () => {
+  for (const [idea, level] of [
+    ['LGS deneme sınavı', 'ortaokul'], ['YKS exam prep', 'lise'], ['TYT exam prep', 'lise'], ['AYT exam prep', 'lise'],
+    ['ilkokul sınavı', 'ilkokul'], ['ortaokul sınavı', 'ortaokul'], ['lise sınavı', 'lise'],
+    ['Öğrenciler için sınav hazırlığı', 'okul'], ['Student exam practice', 'okul'], ['K-12 exam prep', 'K-12'],
+    ['High school entrance exam prep', 'ortaokul'], ['School exam practice', 'okul'], ['Secondary school exam prep', 'lise'], ['KPSS sınav hazırlığı', 'yetişkin'],
+  ]) {
+    const p = L.planQueries(idea, idea);
+    assert.equal(p.edu.level, level, idea);
+    if (level !== 'yetişkin') {
+      const english = p.repoQ.filter((q) => !q.examHint);
+      assert.ok(english.length >= 2, idea);
+      assert.ok(english.every((q) => /school|student exam practice/.test(q.terms.join(' '))), idea);
+    }
+    for (const q of p.repoQ.filter((q) => q.examHint)) {
+      assert.match(q.terms[0], /"(?:lgs|yks|tyt|ayt|kpss) sınav" OR "(?:lgs|yks|tyt|ayt|kpss) exam"/);
+      assert.ok(p.queries.repos.some((s) => s.includes(q.terms[0]) && s.endsWith('in:name,description,topics')));
+    }
+  }
+});
+
+test('school gate: profesyonel hazırlık ad/açıklama/topics alanlarından elenir, kürasyon kapıyı aşamaz', () => {
+  const school = L.planQueries('Student mock exam and exam prep', 'LGS sınavı');
+  const adult = L.planQueries('Professional mock exam and exam prep');
+  const desc = 'Mock exam and exam prep for students';
+  for (const token of ['certification', 'certified', 'aws', 'azure', 'gcp', 'kubernetes', 'cka', 'ckad', 'cks', 'kcsa', 'comptia', 'ccna', 'pmp', 'cissp', 'leetcode', 'interview prep', 'cloud practitioner', 'solutions architect', 'aws_mock', 'ckad_practice', 'interview_prep', 'CloudPractitioner']) {
+    for (const where of ['name', 'desc', 'topics']) {
+      const r = repo({ n: 'school/' + (where === 'name' ? token.replace(/ /g, '-') : 'practice'), d: desc + (where === 'desc' ? ' ' + token : ''), t: where === 'topics' ? [token] : [], s: 500 });
+      assert.equal(L.rankRepos([{ ...r, curated: true, curatedTop: true, curatedKeywords: ['mock exam'] }], school).length, 0, where + ': ' + token);
+      assert.equal(L.rankRepos([r], adult).length, 1, 'profesyonel fikir korunur: ' + token);
+    }
+  }
+  const positive = { ...STUDENT_EXAM_REPOS[0], full_name: 'aws/school-exam-practice', readme: 'AWS certification', homepage: 'https://aws.example' };
+  assert.equal(L.rankRepos([positive], school).length, 1, 'sahip, README ve URL filtre kanıtı değildir');
+});
+
+test('TR exams: yerel eşleşme puanı ve Türkçe gerekçe; kısaltma alt dize/sahipten gelmez', () => {
+  for (const exam of ['lgs', 'yks', 'tyt', 'ayt', 'kpss']) {
+    const p = L.planQueries('Mock exam and exam prep', exam.toUpperCase() + ' sınavı');
+    const base = repo({ n: 'web/practice', d: 'Mock exam and exam prep for students', s: 500 });
+    const plain = L.rankRepos([base], p)[0];
+    for (const r of [{ ...base, full_name: 'web/' + exam }, { ...base, full_name: 'web/' + exam + '_practice' }, { ...base, description: base.description + ' ' + exam.toUpperCase() }, { ...base, topics: [exam] }]) {
+      const local = L.rankRepos([r], p)[0];
+      assert.ok(local.local, exam);
+      assert.ok(local.score > plain.score, exam);
+      assert.ok(local.why.includes('Türkiye’deki sınava yönelik'));
+    }
+    for (const name of [exam + '/practice', 'web/' + exam + 'auth']) assert.ok(!L.rankRepos([{ ...base, full_name: name }], p)[0].local, name);
+  }
+});
+
+for (const smart of [false, true]) for (const positives of [false, true]) test('live LGS regression: certification yok, 0★ küratörlü repo best olamaz; smart=' + smart + ', positives=' + positives, async () => {
+  const items = [...LIVE_EXAM_REPOS, ...(positives ? STUDENT_EXAM_REPOS : [])];
+  const net = eduNet({
+    translate_a: (url) => url.endsWith('tl=en') ? json([[LGS_EN, 'tr']]) : null,
+    'search/repositories': () => json({ items }),
+    'api.anthropic.com': (url, init) => {
+      const b = JSON.parse(init.body);
+      if (b.model === L.MODELS.plan) return claudeText(JSON.stringify({ repo_queries: ['mock exam', 'exam prep'], hn_queries: ['exam prep'], need_terms: ['exam prep'] }));
+      const list = JSON.parse(b.messages[0].content.split('Repositories:\n')[1]);
+      assert.ok(list.every((r) => !LIVE_EXAM_REPOS.filter((x) => x.stargazers_count > 0).some((x) => x.full_name === r.name)));
+      return claudeText(JSON.stringify(list.map((r) => ({ name: r.name, fit: 10, why_tr: 'Sınav hazırlığı örneği' }))));
+    },
+  });
+  const r = await L.research(LGS_IDEA, { atlas: LIVE_EXAM_ATLAS, fetch: net.fetch, ...(smart ? { claudeKey: 'test' } : {}) });
+  assert.equal(r.edu.level, 'ortaokul');
+  assert.equal(r.edu.cats[0].id, 'exam-prep');
+  assertBestOrder(r);
+  const bilge = r.repos.find((x) => x.name === 'turer73/bilge-arena');
+  assert.ok(bilge && bilge.curated && bilge.stars === 0 && !bilge.best);
+  assert.ok(bilge.local && bilge.why.includes('Türkiye’deki sınava yönelik'));
+  assert.ok(r.repos.every((x) => !LIVE_EXAM_REPOS.filter((x) => x.stargazers_count > 0).some((bad) => bad.full_name === x.name)));
+  if (positives) {
+    for (const good of STUDENT_EXAM_REPOS) assert.ok(r.repos.some((x) => x.name === good.full_name), good.full_name);
+    assert.ok(r.repos[0].best && r.repos[0].stars >= 100);
+    assert.equal(r.verdict.repo, r.repos[0].name);
+    assert.ok(r.repos.find((x) => x.name === 'students/lgs-practice').why.includes('Türkiye’deki sınava yönelik'));
+  } else {
+    assert.ok(r.repos.every((x) => !x.best));
+    assert.ok(['gap', 'build'].includes(r.verdict.kind));
+    assert.equal(r.verdict.repo, undefined);
+  }
+  const queries = net.gh().filter((c) => c.url.includes('search/repositories')).map((c) => new URL(c.url).searchParams.get('q'));
+  assert.ok(queries.some((q) => q === '"lgs sınav" OR "lgs exam" in:name,description,topics'), queries.join('; '));
+  assert.ok(queries.filter((q) => !q.includes(' OR ')).every((q) => /school|student exam practice/.test(q)), queries.join('; '));
+  assert.ok(net.gh().length <= 5);
+});
+
+test('school adoption: çok sayıda 0★ örnek rozet veya kalabalık pazar iddiası üretmez', () => {
+  const p = L.planQueries('Student mock exam and exam prep', 'LGS sınavı');
+  const ranked = L.rankRepos(Array.from({ length: 6 }, (_, i) => ({ ...STUDENT_EXAM_REPOS[0], full_name: 'students/practice-' + i, stargazers_count: 0 })), p);
+  assert.equal(ranked.length, 6);
+  assert.ok(ranked.every((r) => !r.best));
+  const v = L.verdict({ edu: p.edu, repos: ranked, products: [{}, {}, {}, {}], sources: [] });
+  assert.ok(['gap', 'build'].includes(v.kind));
+  assert.equal(v.repo, undefined);
+  const professional = { ...ranked[0], desc: 'AWS certification mock exam and exam prep', stars: 50000, bestOk: true, best: true, miss: [] };
+  assert.equal(L.verdict({ edu: p.edu, repos: [professional], sources: [] }).repo, undefined);
 });

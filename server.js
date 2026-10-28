@@ -115,6 +115,8 @@ function parseFeed(xml) {
 // ─── Kaynak tipleri ──────────────────────────────────────────────────────
 const AI_RE = /\b(ai|a\.i\.|llms?|gpt[-\d\w.]*|chatgpt|openai|anthropic|claude|gemini|llama|mistral|qwen|deepseek|grok|copilot|agents?|agentic|mcp|rag|embedding|transformer|diffusion|neural|machine learning|ml|genai|generative|prompt|vibe[- ]?cod\w*|cursor|whisper|ollama|hugging ?face|model|inference|fine[- ]?tun\w*|voice clone|text[- ]to[- ]\w+)\b/i;
 
+const EDU_AI_RE = /\b(ai|a\.i\.|artificial intelligence|generative ai|genai|llms?|gpt[-\d\w.]*|chatgpt|openai|anthropic|claude|gemini|copilot|khanmigo|magicschool|brisk teaching)\b|yapay zek/i;
+
 const TR_AI_RE = /(yapay zek|chatgpt|gemini|claude|openai|copilot|robot)/i;
 
 // Videolar: Shorts hariç, yalnızca gerçekten izlenen ve beğenilenler.
@@ -143,7 +145,9 @@ const fetchers = {
     if (src.aiOnly) {
       // Genel kaynaklarda yalnızca YZ içerikleri; YouTube'da açıklama da kontrol edilir
       const yt = src.url.includes('youtube.com');
-      items = items.filter((i) => [i.title, yt ? i.summary : ''].some((t) => AI_RE.test(t) || TR_AI_RE.test(t)));
+      items = items.filter((i) => src.cat === 'edu'
+        ? EDU_AI_RE.test(i.title + ' ' + i.summary)
+        : [i.title, yt ? i.summary : ''].some((t) => AI_RE.test(t) || TR_AI_RE.test(t)));
     }
     // Techmeme başlıkları "Başlık (Yazar/Yayıncı)" biçiminde
     if (src.id === 'techmeme') items = items.map((i) => ({ ...i, title: i.title.replace(/\s*\(([^()]*\/[^()]*)\)\s*$/, ''), summary: '' }));
@@ -483,7 +487,44 @@ function fmtNum(n) {
 }
 
 // ─── Etiketleme ──────────────────────────────────────────────────────────
+const EDUCATION_TAG = /\b(educational?|education|edtech|teachers?|students?|classrooms?|schools?|tutors?|tutoring|homework|curricul(?:um|a)|k[-– ]?12)\b|(?:^|[^\p{L}\p{N}_])(?:eğitim|öğretmen|öğrenci|okul|sınav|müfredat|ders)\p{L}*/iu;
+function educationContext(text) {
+  return String(text || '').replace(/İ/g, 'I').toLowerCase()
+    // Teknik öğretmen/öğrenci ve model eğitimi insan öğrenmesi değildir.
+    .replace(/\b(?:[\w-]*distill\w*|teachers?[-– ]+students?|(?:teachers?|students?)(?:[-– ]+(?:language|neural|foundation|ai|llm))*[-– ]+models?|curriculum[-– ]+learning)\b/g, ' ')
+    .replace(/(?:^|[^\p{L}])(?:model\p{L}*|llm\p{L}*|yapay zek[aâ] model\p{L}*)\s+(?:ön\s+)?eğitim\p{L}*|(?:^|[^\p{L}])(?:ön eğitim|eğitim veri|eğitilmiş|eğitirken|eğitilirken)\p{L}*/gu, ' ')
+    // Bülten ve video açıklamalarındaki sabit kurs reklamları kanıt sayılmaz.
+    .replace(/\b(?:maker school|skool\.com\S*|course resources|(?:the neuron )?academy|education innovation)\b/g, ' ');
+}
+function isEducationItem(item) {
+  const title = educationContext(item.title);
+  // Kurumsal dokümantasyon için kullanılan "education", okul/kurs haberi değildir.
+  const corporateDocs = /\b(?:documentation|developer docs|education at .*(?:labs|inc|corp))\b/.test(title);
+  const technical = /distill|teacher[-– ]student|student (?:language )?model|teacher model|curriculum learning/i.test(item.title || '');
+  if (/\b(?:edtech|classrooms?|schools?|school districts?|k[-– ]?12|tutors?|tutoring|homework|curricul(?:um|a))\b|(?:^|[^\p{L}])(?:öğretmen|okul|müfredat|meb|eba)\p{L}*/u.test(title)) return true;
+  if (!corporateDocs && /\b(?:educational?|education)\b/.test(title)) return true;
+  if (/\bteachers?\b/.test(title) && (!technical || /\b(?:lessons?|courses?|grades?|teaching)\b/.test(title))) return true;
+  if (/\b(?:students?|professors?)\b|(?:^|[^\p{L}])öğrenci\p{L}*/u.test(title) && /\b(?:lessons?|exams?|courses?|grades?|grading|study|studying|teaching|math)\b|(?:^|[^\p{L}])(?:ders|sınav|öğren)\p{L}*/u.test(title)) return true;
+  const personLearning = /(?:^|[^\p{L}])(?:öğrenci|öğretmen|okul|eğitimde|kurs|akademi|meb)\p{L}*|yapay zek[aâ]\s+eğitim\p{L}*/u.test(title);
+  if (personLearning && /(?:^|[^\p{L}])eğitim\p{L}*/u.test(title)) return true;
+  // Eğitim kategorisinden gelen tek başına teknik ML başlıklarını da doğrula.
+  if (corporateDocs || item.cat === 'video' || item.type === 'video' || /(?:youtube\.com|youtu\.be)/i.test(item.url || item.link || '')) return false;
+  let summary = educationContext(item.summary);
+  if (/distill|curriculum learning/i.test(item.summary || '') && !/\b(?:schools?|classrooms?|lessons?|homework|exams?|courses?|k[-– ]?12)\b/.test(summary)) summary = summary.replace(/\b(?:teachers?|students?)\b/g, ' ');
+  const schooling = [
+    /\bteachers?\b|(?:^|[^\p{L}])öğretmen\p{L}*/u,
+    /\bclassrooms?\b|(?:^|[^\p{L}])sınıf\p{L}*/u,
+    /\b(?:schools?|school districts?)\b|(?:^|[^\p{L}])okul\p{L}*/u,
+    /\bk[-– ]?12\b/,
+    /\bstudents?\b|(?:^|[^\p{L}])öğrenci\p{L}*/u,
+    /(?:^|[^\p{L}])(?:meb|eba)(?:$|[^\p{L}])/u,
+    /\blessons?\b|(?:^|[^\p{L}])ders\p{L}*/u,
+  ];
+  // Tek başına "students" bir pazarlama kitlesi olabilir; ikinci okul kanıtı gerekir.
+  return schooling.filter((re) => re.test(summary)).length >= 2;
+}
 const TAGS = [
+  ['Eğitim', EDUCATION_TAG],
   ['OpenAI', /\b(openai|chatgpt|gpt-?\d|sora|codex|o\d-?(mini|pro)?)\b/i],
   ['Claude', /\b(claude|anthropic)\b/i],
   ['Gemini', /\b(gemini|deepmind|gemma|veo|imagen|notebooklm)\b/i],
@@ -509,7 +550,7 @@ const TAGS = [
 ];
 function tagsFor(item) {
   const text = `${item.title} ${item.summary || ''}`;
-  return TAGS.filter(([, re]) => re.test(text)).map(([n]) => n).slice(0, 4);
+  return TAGS.filter(([n, re]) => n === 'Eğitim' ? isEducationItem(item) : re.test(text)).map(([n]) => n).slice(0, 4);
 }
 
 // ─── Toplama döngüsü ─────────────────────────────────────────────────────
@@ -625,6 +666,7 @@ function buildPayload() {
   const now = Date.now();
   const trCache = state.tr.tr || {};
   for (const it of items) {
+    it.tags = tagsFor(it);
     delete it.body;
     const det = state.details?.[it.id];
     if (det) {
@@ -679,6 +721,108 @@ function loadCache() {
   }
 }
 
+// ─── Eğitim Atlası ──────────────────────────────────────────────────────
+const ATLAS_FILE = path.join(ROOT, 'atlas', 'edu.json');
+const ATLAS_OUT = path.join(PUBLIC, 'data', 'edu-atlas.json');
+const ATLAS_REFRESH_MS = 24 * 60 * 60 * 1000;
+let atlasBuild = null;
+let atlasLastRequest = 0;
+
+function buildAtlas({ force = false } = {}) {
+  if (atlasBuild) return atlasBuild;
+  atlasBuild = buildAtlasData(force).finally(() => { atlasBuild = null; });
+  return atlasBuild;
+}
+
+async function buildAtlasData(force) {
+  let previous = Array.isArray(state.atlas?.categories) ? state.atlas : null;
+  try {
+    const saved = JSON.parse(fs.readFileSync(ATLAS_OUT, 'utf8'));
+    if (Array.isArray(saved.categories) && (!previous || Number(saved.builtAt || 0) > Number(previous.builtAt || 0))) previous = saved;
+  } catch {}
+  if (previous && !fs.existsSync(ATLAS_OUT)) {
+    fs.mkdirSync(path.dirname(ATLAS_OUT), { recursive: true });
+    fs.writeFileSync(ATLAS_OUT, JSON.stringify(previous));
+  }
+  if (!force && previous?.builtAt > Date.now() - ATLAS_REFRESH_MS) {
+    state.atlas = previous;
+    return previous;
+  }
+
+  let atlas;
+  try {
+    atlas = JSON.parse(fs.readFileSync(ATLAS_FILE, 'utf8'));
+    if (!Array.isArray(atlas.categories) || !atlas.categories.length) throw new Error('Atlas kategorileri eksik');
+  } catch (e) {
+    log('Eğitim Atlası okunamadı:', e.message);
+    if (previous) { state.atlas = previous; return previous; }
+    throw e;
+  }
+  const { normalizeLicense } = require('./public/lab-engine');
+  const names = [...new Set(atlas.categories.flatMap((c) => (c.repos || []).map((r) => String(r.name || '').toLowerCase())))]
+    .filter((n) => /^[a-z0-9_.-]+\/[a-z0-9_.-]+$/i.test(n) && n.length + 5 <= 240);
+  const batches = [];
+  for (const name of names) {
+    const term = 'repo:' + name;
+    if (!batches.length || (batches[batches.length - 1].join(' ') + ' ' + term).trim().length > 240) batches.push([]);
+    batches[batches.length - 1].push(term);
+  }
+  const oldRepos = new Map((previous?.categories || []).flatMap((c) => (c.repos || []).map((r) => [r.name.toLowerCase(), r])));
+  const repos = new Map();
+  const headers = { Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' };
+  const token = process.env.GITHUB_TOKEN?.trim();
+  if (token) headers.Authorization = 'Bearer ' + token;
+  let failures = 0, blocked = false;
+  for (const terms of batches) {
+    try {
+      if (blocked) throw new Error('GitHub arama sınırı veya yetkilendirme hatası');
+      // Anahtarsız arama sınırı 10/dk; anahtarla da arama istekleri aralıklı gider.
+      const wait = atlasLastRequest + (token ? 2100 : 6500) - Date.now();
+      if (wait > 0) await sleep(wait);
+      atlasLastRequest = Date.now();
+      const data = await get('https://api.github.com/search/repositories?q=' + encodeURIComponent(terms.join(' ')) + '&per_page=100', { json: true, headers });
+      if (!Array.isArray(data.items) || data.incomplete_results) throw new Error('GitHub eksik arama yanıtı');
+      const requested = new Set(terms.map((t) => t.slice(5)));
+      for (const r of data.items) {
+        if (!requested.has(String(r.full_name || '').toLowerCase())) continue;
+        repos.set(r.full_name.toLowerCase(), {
+          name: r.full_name, url: 'https://github.com/' + r.full_name,
+          desc: r.description || '', stars: Number(r.stargazers_count) || 0, forks: Number(r.forks_count) || 0,
+          pushed: Date.parse(r.pushed_at) || 0, lang: r.language || '', topics: Array.isArray(r.topics) ? r.topics : [],
+          license: normalizeLicense(r.license), archived: Boolean(r.archived),
+        });
+      }
+    } catch (e) {
+      failures++;
+      if ([401, 403, 429].includes(e.status)) blocked = true;
+      log('Atlas GitHub sorgusu yenilenemedi; önceki veriler korunuyor:', e.message);
+      for (const term of terms) {
+        const name = term.slice(5);
+        if (oldRepos.has(name)) repos.set(name, oldRepos.get(name));
+      }
+    }
+  }
+  if (failures && failures === batches.length) {
+    if (previous) { state.atlas = previous; return previous; }
+    throw new Error('Eğitim Atlası için GitHub verisi alınamadı; mevcut dosya değiştirilmedi');
+  }
+  const built = {
+    ...atlas,
+    categories: atlas.categories.map((c) => ({ ...c, repos: (c.repos || []).flatMap((r) => {
+      const meta = repos.get(String(r.name || '').toLowerCase());
+      return meta ? [{ ...meta, why: r.why || '' }] : [];
+    }) })),
+    builtAt: failures ? previous?.builtAt || 0 : Date.now(),
+  };
+  fs.mkdirSync(path.dirname(ATLAS_OUT), { recursive: true });
+  const temp = ATLAS_OUT + '.tmp';
+  fs.writeFileSync(temp, JSON.stringify(built));
+  fs.renameSync(temp, ATLAS_OUT);
+  state.atlas = built;
+  log('Eğitim Atlası yazıldı: ' + built.categories.length + ' kategori, ' + repos.size + ' proje' + (failures ? ' (kısmi yenileme)' : ''));
+  return built;
+}
+
 // ─── HTTP ────────────────────────────────────────────────────────────────
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.json': 'application/json', '.webmanifest': 'application/manifest+json' };
 
@@ -717,22 +861,30 @@ function scheduleNext() {
   timer = setTimeout(() => refreshAll().then(scheduleNext), next - Date.now());
 }
 
-loadCache();
-state.tr ||= {};
+module.exports = { tagsFor };
 
-// --build: bir kez tara, public/data/news.json yaz ve çık (GitHub Actions / statik barındırma için)
-if (process.argv.includes('--build')) {
-  refreshAll('build').then(() => {
-    const out = path.join(PUBLIC, 'data', 'news.json');
-    fs.mkdirSync(path.dirname(out), { recursive: true });
-    const payload = buildPayload();
-    payload.static = true;
-    payload.nextAt = Date.now() + REFRESH_MS;
-    fs.writeFileSync(out, JSON.stringify(payload));
-    log(`Statik veri yazıldı: ${out} (${payload.items.length} öğe)`);
+if (require.main === module) {
+  loadCache();
+  state.tr ||= {};
+
+  // --build: bir kez tara, public/data/news.json yaz ve çık (GitHub Actions / statik barındırma için)
+  if (process.argv.includes('--atlas')) {
+    buildAtlas({ force: true }).then(saveCache).catch((e) => { log(e.message); process.exitCode = 1; });
+  } else if (process.argv.includes('--build')) {
+    Promise.all([refreshAll('build'), buildAtlas().catch((e) => log('Atlas derlenemedi:', e.message))]).then(() => {
+      const out = path.join(PUBLIC, 'data', 'news.json');
+      fs.mkdirSync(path.dirname(out), { recursive: true });
+      const payload = buildPayload();
+      payload.static = true;
+      payload.nextAt = Date.now() + REFRESH_MS;
+      fs.writeFileSync(out, JSON.stringify(payload));
+      saveCache();
+      log(`Statik veri yazıldı: ${out} (${payload.items.length} öğe)`);
+    });
+  } else server.listen(PORT, () => {
+    log(`YZ Radar çalışıyor → http://localhost:${PORT}`);
+    buildAtlas().then(saveCache).catch((e) => log('Atlas derlenemedi:', e.message));
+    const stale = Date.now() - state.updatedAt > 20 * 60 * 1000;
+    (stale ? refreshAll('başlangıç') : Promise.resolve()).then(scheduleNext);
   });
-} else server.listen(PORT, () => {
-  log(`YZ Radar çalışıyor → http://localhost:${PORT}`);
-  const stale = Date.now() - state.updatedAt > 20 * 60 * 1000;
-  (stale ? refreshAll('başlangıç') : Promise.resolve()).then(scheduleNext);
-});
+}

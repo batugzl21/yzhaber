@@ -71,7 +71,7 @@
   // Kategori uyduları (sıra app.js'teki sekmelerle aynı)
   const CATS = [
     ['models', 0xa48bff], ['news', 0x4fd8ff], ['apps', 0xc6ff3d], ['ideas', 0xffb547],
-    ['learn', 0x7ee0c3], ['video', 0xff5f6d], ['tr', 0xff7a7a],
+    ['edu', 0x27c9b5], ['learn', 0x7ee0c3], ['video', 0xff5f6d], ['tr', 0xff7a7a],
   ];
   const sats = CATS.map(([id, col], i) => {
     const ringInfo = rings[i % rings.length];

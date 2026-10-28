@@ -1,6 +1,6 @@
 // Haber kaynakları. Her kaynak canlı olarak test edildi (Ekim 2026).
 // type: rss | hn | showhn | askhn | hf-papers | hf-models | hf-spaces | gh-trending | gh-new | anthropic | reddit
-// cat:  models | news | tr | apps | ideas | research | community | video
+// cat:  models | news | edu | tr | apps | ideas | research | community | video
 // aiOnly: genel akışlarda yalnızca yapay zeka ile ilgili başlıkları al
 // weight: güvenilirlik/önem çarpanı (gündem sıralamasında kullanılır)
 
@@ -51,6 +51,16 @@ module.exports = [
   { id: 'smolai', name: 'AINews (smol.ai)', type: 'rss', url: 'https://news.smol.ai/rss.xml', cat: 'news', weight: 1.3, limit: 8 },
   { id: 'tldrai', name: 'TLDR AI', type: 'rss', url: 'https://tldr.tech/api/rss/ai', cat: 'news', weight: 1.0, limit: 8 },
   { id: 'rundown', name: 'The Rundown AI', type: 'rss', url: 'https://www.therundown.ai/feed', cat: 'news', weight: 1.0, limit: 8 },
+
+  // ── Eğitimde YZ ─────────────────────────────────────────────────────
+  { id: 'edsurge', name: 'EdSurge', type: 'rss', url: 'https://www.edsurge.com/articles_rss', cat: 'edu', weight: 1.2, limit: 12, aiOnly: true },
+  { id: 'hechinger', name: 'The Hechinger Report', type: 'rss', url: 'https://hechingerreport.org/feed/', cat: 'edu', weight: 1.2, limit: 10, aiOnly: true },
+  { id: 'the74', name: 'The 74', type: 'rss', url: 'https://www.the74million.org/feed/', cat: 'edu', weight: 1.1, limit: 10, aiOnly: true },
+  { id: 'eschoolnews', name: 'eSchool News', type: 'rss', url: 'https://www.eschoolnews.com/feed/', cat: 'edu', weight: 1.0, limit: 12, aiOnly: true },
+  { id: 'gettingsmart', name: 'Getting Smart', type: 'rss', url: 'https://www.gettingsmart.com/feed/', cat: 'edu', weight: 1.0, limit: 10, aiOnly: true },
+  { id: 'khanblog', name: 'Khan Academy Blog', type: 'rss', url: 'https://blog.khanacademy.org/feed/', cat: 'edu', weight: 1.1, limit: 10, aiOnly: true },
+  { id: 'googleedu', name: 'Google for Education', type: 'rss', url: 'https://blog.google/outreach-initiatives/education/rss/', cat: 'edu', weight: 1.1, limit: 10, aiOnly: true },
+  { id: 'edtechk12', name: 'EdTech Magazine · K–12', type: 'rss', url: 'https://edtechmagazine.com/k12/rss.xml', cat: 'edu', weight: 1.0, limit: 10, aiOnly: true },
 
   // ── Türkçe kaynaklar ────────────────────────────────────────────────
   { id: 'webrazzi', name: 'Webrazzi', lang: 'tr', type: 'rss', url: 'https://webrazzi.com/kategori/yapay-zeka/feed/', cat: 'tr', weight: 1.0, limit: 15 },

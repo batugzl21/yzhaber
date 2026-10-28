@@ -58,7 +58,7 @@ const LabEngine = (() => {
   // Atlanan kelimeler (isim öbeğini bölmez): belirteçler, sıfatlar, zarflar
   const STOP = new Set(('a an the this these those it its their his her my our your i we you he she they there be is are was were been being can could will would should may might must do does did has have had as so such than then also just only very more most much many any some each every all both about over under up down out new etc way ways thing things one own other others easy easily quick quickly fast automatic automatically auto automated smart better best free online digital modern powerful supported powered driven enabled integrated people person everyone anyone turkish turkey english language personalized personalised personal custom customized customised special various different specific general multiple single full complete comprehensive advanced basic simple intelligent efficient seamless instant beautiful whole able like based friendly user-friendly easy-to-use local daily real-time realtime short long large high low recent').split(' '));
   // Ayraçlar: isim öbeğini kapatır, edat bilgisini taşır
-  const SEP = new Set('and or that which who whom whose to for from with via by into onto in on at of through using within without plus where when while if because'.split(' '));
+  const SEP = new Set('and or that which who whom whose to for from with via by into onto in on at of through using within without plus where when while if because according accordance per upon until unless whether'.split(' '));
   const PRON = new Set('them it these those this that'.split(' '));
   // Genel ürün kelimeleri: öbeği kapatır, kavram olmaz
   const GENERIC = new Set('app application apps tool tools platform system systems software service services solution solutions program product project feature features idea mvp startup helper manager management version thing stuff module kit suite engine framework utility'.split(' '));
@@ -73,7 +73,7 @@ const LabEngine = (() => {
   // Fiiller: öbeği kapatır; bazıları kavrama "eylem ismi" ekler, bazıları kanal ipucu verir
   const VERBS = {};
   const vb = (forms, act = '', hint = '') => forms.split(' ').forEach((f) => { VERBS[f] = { act, hint }; });
-  vb('make makes made making create creates created prepare prepares prepared help helps helped build builds built find finds get gets give gives send sends receive receives use uses used allow allows enable enables let lets provide provides handle handles process processes processed convert converts turn turns show shows display displays organize organizes organise organises keep keeps manage manages managed automate automates simplify simplifies streamline streamlines analyze analyzes analyse analyses check checks collect collects store stores save saves share shares connect connects integrate integrates support supports offer offers improve improves');
+  vb('make makes made making create creates created prepare prepares prepared help helps helped build builds built find finds get gets give gives send sends receive receives use uses used allow allows enable enables let lets provide provides handle handles process processes processed convert converts turn turns show shows display displays organize organizes organise organises keep keeps manage manages managed automate automates simplify simplifies streamline streamlines analyze analyzes analyse analyses check checks collect collects store stores save saves share shares connect connects integrate integrates support supports offer offers improve improves produce produces produced present presents presented require requires required suggest suggests suggested');
   vb('monitor monitors track tracks follow follows', 'tracking');
   vb('remind reminds', 'reminder');
   vb('notify notifies alert alerts', 'notification');
@@ -200,8 +200,7 @@ const LabEngine = (() => {
   const LOCAL = [
     [/e[ -]?(?:fatura|arşiv|arsiv|irsaliye)|\bgib\b|gelir idaresi/, 'e-fatura', ['efatura', 'fatura', 'gib', 'earsiv', 'e-arsiv'], 'e-fatura'],
     [/e[ -]?defter/, 'e-defter', ['edefter', 'e-ledger'], 'edefter', 'accounting'],
-    [/\byks\b|\btyt\b|\bayt\b|ösym/, 'yks', ['tyt', 'ayt', 'osym'], '', 'exam'],
-    [/\blgs\b/, 'lgs', [], '', 'exam'], [/\bkpss\b/, 'kpss', [], '', 'exam'], [/\bkvkk\b/, 'kvkk', ['gdpr']],
+    [/\bkvkk\b/, 'kvkk', ['gdpr']],
     [/sahibinden/, 'sahibinden', ['emlak'], 'sahibinden'], [/trendyol/, 'trendyol', [], 'trendyol'], [/hepsiburada/, 'hepsiburada', [], 'hepsiburada'],
     [/iyzico/, 'iyzico', ['payment'], 'iyzico'], [/e-?devlet/, 'e-devlet', ['edevlet'], 'e-devlet'],
   ];
@@ -260,18 +259,82 @@ const LabEngine = (() => {
     { re: /\bemlakci[a-z]*\b/, t: 'real estate', en: /\b(?:estate agents?|real estate agents?|realtors?)\b/g },
     { re: /\bmali\s+musavir[a-z]*\b/, t: 'accountant', en: /\b(?:(?:financial|fiscal) (?:advis[eo]rs?|consultants?)|accountants?)\b/g },
   ];
+
+  const EDU_CONCEPTS = [
+    [/\bsokratik[a-z]*\b/, 'socratic', ['socratic', 'socratic tutor'], /\bsocratic(?: questions?)?\b/g, 'Sokratik yaklaşım'],
+    [/\b(?:kademeli\s+)?ipuc[a-z]*\b/, 'hint', ['hint', 'scaffolding'], /\b(?:(?:gradual|incremental|step.by.step) )?(?:hints?|clues?|scaffolding)\b/g, 'ipucu'],
+    [/\b(?:cevab[a-z]*\s+vermeden|cozum[a-z]*\s+gostermeden)\b/, 'hint-based tutor', ['hint-based tutor', 'without giving answers'], /\b(?:without (?:giving|revealing) (?:the )?(?:answers?|solutions?)|(?:giving|revealing) (?:the )?answer)\b/g, 'cevap vermeden yönlendirme'],
+    [/\bkavram\s+yanilgi[a-z]*\b/, 'misconception', ['misconception', 'conceptual misunderstanding'], /\b(?:misconceptions?|conceptual misunderstandings?)\b/g, 'kavram yanılgısı'],
+    [/\bcikis\s+(?:kart|bilet)[a-z]*\b/, 'exit ticket', ['exit ticket', 'exit slip'], /\bexit (?:tickets?|slips?)\b/g, 'çıkış kartı'],
+    [/\byardimsiz[a-z]*\b/, 'independent practice', ['independent practice', 'unassisted learning'], /\b(?:independent practice|unassisted learning|without (?:help|assistance))\b/g, 'yardımsız pratik'],
+    [/\bders\s+plan[a-z]*\b/, 'lesson plan', ['lesson plan', 'lesson planning'], /\b(?:course|lesson) plan(?:s|ning)?\b/g, 'ders planı'],
+    [/\bkazanim[a-z]*\b/, 'learning outcomes', ['learning outcomes', 'learning objectives'], /\b(?:gains?|achievements?|learning (?:outcomes?|objectives?))\b/g, 'kazanım'],
+    [/\b(?:olcme\s+(?:ve\s+)?degerlendirme|degerlendirme)[a-z]*\b/, 'assessment', ['assessment', 'formative assessment'], /\b(?:measurement (?:and )?evaluation|evaluation|assessment)\b/g, 'ölçme değerlendirme'],
+    [/\b(?:rubrik|dereceli\s+puanlama)[a-z]*\b/, 'rubric', ['rubric', 'grading rubric'], /\b(?:rubrics?|graded scoring|rating scales?)\b/g, 'rubrik'],
+    [/\bsoru\s+banka[a-z]*\b/, 'question bank', ['question bank', 'quiz bank'], /\b(?:question|quiz) banks?\b/g, 'soru bankası'],
+    [/\bdeneme(?:ler[a-z]*)?(?:\s+sinav[a-z]*)?\b|\b(?:lgs|yks|kpss|tyt|ayt)\s+deneme[a-z]*\b/, 'mock exam', ['mock exam', 'practice test'], /\b(?:(?:trial|mock|practice) (?:exams?|tests?)|trials?)\b/g, 'deneme sınavı'],
+    [/\b(?:yanlis[a-z]*|hata\s+neden[a-z]*)\b/, 'error analysis', ['error analysis', 'wrong answers', 'mistake analysis'], /\b(?:wrong answers?|(?:error|mistake)s?(?: (?:analysis|reasons?|causes?))?)\b/g, 'yanlış analizi'],
+    [/\bkonu\s+analiz[a-z]*\b/, 'topic analysis', ['topic analysis'], /\b(?:topic|subject) analysis\b/g, 'konu analizi'],
+    [/\btekrar\s+hedef[a-z]*\b/, 'review plan', ['review plan'], /\b(?:(?:review|revision|repetition) (?:targets?|goals?|plans?))\b/g, 'tekrar hedefi'],
+    [/\b(?:lgs|yks|kpss|tyt|ayt|osym)\b/, 'exam prep', ['exam prep', 'test preparation'], /\b(?:lgs|yks|kpss|tyt|ayt|osym|exam preparation|test preparation)\b/g, 'sınava hazırlık'],
+    [/\b(?:ozel\s+egitim|bep)[a-z]*\b/, 'special education', ['special education', 'IEP'], /\b(?:special (?:education|training)|individuali[sz]ed education (?:plans?|programs?)|iep|bep)\b/g, 'özel eğitim/BEP'],
+    [/\bdisleksi[a-z]*\b/, 'dyslexia', ['dyslexia', 'dyslexic'], /\bdyslexi[ac]\b/g, 'disleksi'],
+    [/\bokuma\s+yazma[a-z]*\b/, 'literacy', ['literacy', 'reading'], /\b(?:reading (?:and )?writing|literacy)\b/g, 'okuma yazma'],
+    [/\bokul\s+oncesi[a-z]*\b/, 'early childhood', ['early childhood', 'preschool'], /\b(?:pre[ -]?school|early childhood)\b/g, 'okul öncesi'],
+    [/\brehberlik[a-z]*\b/, 'school counseling', ['school counseling', 'student guidance'], /\b(?:guidance|school counsel(?:l)?ing)\b/g, 'rehberlik'],
+    [/\bveli[a-z]*\b/, 'parent communication', ['parent communication', 'school parent'], /\b(?:parent(?:al)? communication|parents?)\b/g, 'veli iletişimi'],
+    [/\bodev[a-z]*\b/, 'homework', ['homework', 'assignment'], /\b(?:homeworks?|assignments?)\b/g, 'ödev'],
+    [/\bogretmen[a-z]*\b/, 'teacher', ['teacher', 'educator'], /\b(?:teachers?|educators?)\b/g, 'öğretmen'],
+    [/\bogrenci[a-z]*\b/, 'student', ['student', 'learner'], /\b(?:students?|learners?)\b/g, 'öğrenci'],
+    [/\bters\s+yuz\s+sinif(?!landir|lama)[a-z]*\b/, 'flipped classroom', ['flipped classroom', 'flipped learning'], /\b(?:inverted|flipped) class(?:room)?s?\b/g, 'ters yüz sınıf'],
+    [/\bsinif(?!landir|lama)[a-z]*\b/, 'classroom', ['classroom', 'class management'], /\b(?:classrooms?|classes)\b/g, 'sınıf'],
+    [/\bakran[a-z]*\b/, 'peer', ['peer', 'peer learning'], /\bpeers?\b/g, 'akran'],
+    [/\bgeri\s+bildirim[a-z]*\b/, 'feedback', ['feedback', 'formative feedback'], /\bfeed[ -]?back\b/g, 'geri bildirim'],
+    [/\boyunlastirma[a-z]*\b/, 'gamification', ['gamification', 'game based learning'], /\bgamification\b/g, 'oyunlaştırma'],
+    [/\buzaktan\s+egitim[a-z]*\b/, 'online learning', ['online learning', 'LMS'], /\b(?:distance (?:education|learning)|remote (?:education|learning)|online (?:education|learning))\b/g, 'uzaktan eğitim'],
+    [/\bkodlama\s+egitim[a-z]*\b/, 'programming education', ['programming education', 'autograder'], /\b(?:coding|programming) (?:education|training)\b/g, 'kodlama eğitimi'],
+    [/\bmatematik[a-z]*\b/, 'math', ['math', 'mathematics'], /\b(?:maths?|mathematics)\b/g, 'matematik'],
+    [/\bfen\b/, 'science', ['science', 'STEM education'], /\bscience\b/g, 'fen'],
+    [/\bingilizce\s+ogren[a-z]*\b/, 'language learning', ['language learning', 'ESL'], /\b(?:english (?:learning|language)|learning english|language learning|esl)\b/g, 'İngilizce öğrenme'],
+  ].map(([re, t, alternatives, en, tr]) => ({ re, t, alternatives, en, tr, edu: true }));
+  TR_CONCEPTS.push(...EDU_CONCEPTS);
+  for (const c of EDU_CONCEPTS) {
+    TR_LABEL[c.t] = c.tr;
+    SYN[c.t] = uniq([...(SYN[c.t] || []), ...c.alternatives.filter((t) => lower(t) !== c.t).map(lower)]);
+  }
+  // Alan öbekleri tek kavram kalır; genel exam kalıbından önce çalışır.
+  PHRASES.unshift(...EDU_CONCEPTS.filter((c) => c.t.includes(' ')).map((c) => [new RegExp('\\b' + c.t + '(?:s)?\\b', 'g'), c.t]));
+  // Yalnızca sözlükte isim/sıfat olarak bilinen öğelerden serbest öbek kur.
+  // Kanonik çok sözcüklü kavramlar (special education, hint-based tutor vb.) atomiktir.
+  const CONTENT = new Set([
+    ...DICT.map(([, en]) => en), ...Object.keys(SYN), ...Object.values(SYN).flat(),
+    ...Object.values(LEMMA), ...PHRASES.map(([, t]) => t),
+    ...TR_CONCEPTS.flatMap((c) => [c.t, ...(c.alternatives || [])]),
+    ...ORG, ...NOT_ROLE, ...WEAK, ...TYPES, ...AUD_PH, ...Object.keys(CHANNELS),
+    ...'nutrition veterinary vaccination reading discussion podcast episode clip video audio science middle primary elementary secondary university curriculum duration topic error mistake target editable exit ticket concept knowledge practice learning student teacher education google museum curator collection care progress'.split(' '),
+  ]);
+  const CONTENT_WORDS = new Set([...CONTENT].flatMap((t) => t.split(' ')).map(singular));
+  const NOUN_VERBS = new Set('record track book schedule answer reply offer extract scan support alert use check store'.split(' '));
+  const termNoise = (w) => STOP.has(w) || SEP.has(w) || GENERIC.has(w) || !!VERBS[w] && !NOUN_VERBS.has(singular(w));
+  const contentTerm = (t) => t.includes(' ') ? CONTENT.has(t) : !termNoise(t) && CONTENT_WORDS.has(singular(t));
+
+  const eduContextOnly = /\b(?:e[ -]?okul|eba|mebbis|e[ -]?school)[a-z]*\b/gi;
+
   const trConcepts = (tr) => {
     const source = trFold(tr);
-    return TR_CONCEPTS.filter((c) => c.re.test(c.t === 'hoa management' ? source.replace(/\b(?:web|internet)\s+site[a-z]*/g, ' ') : source));
+    return TR_CONCEPTS.filter((c) => !(c.t === 'classroom' && /\bters\s+yuz\s+sinif/.test(source)) && c.re.test(c.t === 'hoa management' ? source.replace(/\b(?:web|internet)\s+site[a-z]*/g, ' ') : source));
   };
   function conceptEnglish(en, tr, strict = false, inject = true) {
     let txt = String(en || '');
     if (strict) return txt; // Kullanıcının elle düzelttiği İngilizce metin önceliklidir.
     const found = trConcepts(tr);
-    if (!found.length) return txt;
-    txt = lower(txt);
+    if (!found.length) return txt.replace(/İ/g, 'I').replace(eduContextOnly, ' ');
+    txt = lower(txt).replace(/\u0307/g, '').replace(eduContextOnly, ' ');
     for (const c of found) {
-      txt = txt.replace(c.en, (match) => c.t === 'accountant' && /s$/.test(match) ? 'accountants' : c.t);
+      txt = txt.replace(c.en, (match) => {
+        if (c.t === 'accountant' && /s$/.test(match)) return 'accountants';
+        return c.edu && ['teacher', 'student'].includes(c.t) && /s$/.test(match) ? c.t + 's' : c.t;
+      });
       if (inject && !has(field(txt), c.t)) txt += ', ' + c.t;
     }
     // Aidat konut bağlamındaysa, tek başına belirsiz "site" çevirisine de yer bırakma.
@@ -280,6 +343,145 @@ const LabEngine = (() => {
     }
     return txt;
   }
+
+
+  // Genel education/teacher etiketleri tek başına bütün atlası eşleştirmesin.
+  const EDU_GENERIC = new Set(['ai', 'education', 'educational', 'learning', 'teacher', 'student', 'school', 'egitim', 'ogretmen', 'ogrenci', 'okul', 'yapay zeka']);
+  const EDU_NOISE = new Set([...EDU_GENERIC, 'teaching', 'concept', 'revealing', 'answer', 'question', 'gradual', 'clue']);
+  const trTerm = (text, term) => {
+    const key = trFold(term).replace(/[^a-z0-9]+/g, ' ').trim();
+    return !!key && new RegExp('(?:^|[^a-z0-9])' + key.replace(/ /g, '\\s+') + '[a-z]*(?:$|[^a-z0-9])').test(trFold(text));
+  };
+  // Ortak kapı: URL, repo sahibi ve README eğitim kanıtı sayılmaz.
+  function hasEduAnchor(...texts) {
+    const text = trFold(texts.join(' ').replace(/([a-z])([A-Z])/g, '$1 $2'))
+      .replace(/[^a-z0-9]+/g, ' ')
+      .replace(/\b(?:machine|deep|reinforcement) learning\b/g, ' ');
+    return /\b(?:tutors?|tutoring|education(?:al)?|educators?|edtech|learning|learners?|students?|teachers?|teaching|schools?|classrooms?|courses?|lessons?|quizz?(?:es)?|exams?|study|studies|studying|flashcards?|homework|curricul(?:um|a)|pedagog\w*|k\s*12|moocs?|lms|moodle|e learning|egitim[a-z]*|egitsel[a-z]*|ogren[a-z]*|ogrenci[a-z]*|ogret[a-z]*|(?:ana|ilk|orta)?okul[a-z]*|sinif(?!landir|lama)[a-z]*|ders[a-z]*|sinav[a-z]*|odev[a-z]*|mufredat[a-z]*|pedagoji[a-z]*|calisma|bilgi kart[a-z]*|kurs(?:u|lar[a-z]*)?)\b/.test(text);
+  }
+  const repoText = (r) => [String(r.full_name || r.name || '').split('/').pop(), r.description || r.desc || '', ...(r.topics || [])].join(' ').replace(/([a-z])([A-Z])/g, '$1 $2');
+  const schoolLevel = (edu) => ['okul öncesi', 'ilkokul', 'ortaokul', 'lise', 'K-12', 'okul'].includes(edu?.level);
+  const schoolExam = (edu) => schoolLevel(edu) && !!edu.examPrep;
+  const trExams = (text) => uniq(trFold(text).replace(/[^a-z0-9]+/g, ' ').match(/\b(?:lgs|yks|tyt|ayt|kpss)\b/g) || []);
+  const professionalPrep = (r) => /\b(?:certifications?|certified|aws|azure|gcp|kubernetes|cka|ckad|cks|kcsa|comptia|ccna|pmp|cissp|leetcode|interview[ -]+prep(?:aration)?|cloud[ -]+practitioner|solutions?[ -]+architect)\b/i.test(repoText(r).replace(/[^a-z0-9]+/gi, ' '));
+  const localExamMatch = (r, edu) => {
+    const exams = edu?.exams || [];
+    return exams.length > 0 && trExams(repoText(r)).some((e) => exams.includes(e) || schoolLevel(edu) && /^(?:lgs|yks|tyt|ayt)$/.test(e));
+  };
+  const repoEduAnchor = (r) => trExams(repoText(r)).length > 0 || hasEduAnchor(String(r.full_name || r.name || '').split('/').pop(), r.description || r.desc, ...(r.topics || []));
+  // Eğitim sorgularında genişletme de alanı korur; tek sözcükli arama yapılmaz.
+  function eduQuery(q, plan) {
+    q = String(q || '').trim();
+    if (schoolExam(plan.edu) && !/\b(?:school|student exam practice)\b/i.test(q)) {
+      return [q, plan.edu.exams?.includes('lgs') ? 'high school entrance exam' : 'school exam'].filter(Boolean).join(' ');
+    }
+    if (hasEduAnchor(q) && words(q).length >= 2) return q;
+    const anchor = concepts(plan).some((c) => /\btutor(?:ing)?\b/.test(c.t)) ? 'tutor' : 'education';
+    return [q, lower(q) === anchor ? 'software' : anchor].filter(Boolean).join(' ');
+  }
+  function anchorEduPlan(plan) {
+    plan.edu = plan.edu || true;
+    const anchor = (q) => eduQuery(q, plan);
+    const seen = new Set();
+    plan.repoQ = plan.repoQ.map((q) => ({ ...q, terms: [q.examHint ? q.terms.join(' ') : anchor(q.terms.join(' '))] }))
+      .filter((q) => { const k = q.terms.join(' '); if (seen.has(k)) return false; seen.add(k); return true; });
+    const alternatives = [...concepts(plan).filter((c) => !['ch', 's', 'prf'].includes(c.role)).map((c) => c.t), 'education software'];
+    for (const t of alternatives) {
+      if (plan.repoQ.length >= 2) break;
+      const q = anchor(t);
+      if (!seen.has(q)) { seen.add(q); plan.repoQ.push({ terms: [q], extra: '', sort: '', early: true }); }
+    }
+    if (schoolExam(plan.edu)) {
+      // Yerel kısaltma okul çapalarının yerine geçmez; ayrı OR sorgusu olarak kalır.
+      const english = plan.repoQ.filter((q) => !q.examHint);
+      const practice = { terms: ['student exam practice school exam'], extra: '', sort: '', early: true };
+      plan.repoQ = [english[0], practice].filter(Boolean);
+    }
+    if (plan.edu.exams?.length) {
+      const terms = [plan.edu.exams.flatMap((e) => ['"' + e + ' sınav"', '"' + e + ' exam"']).join(' OR ')];
+      plan.repoQ = [...plan.repoQ.filter((q) => !q.examHint).slice(0, 2), { terms, extra: '', sort: '', early: true, examHint: true }];
+    }
+    plan.broadQ = uniq(plan.broadQ.map(anchor));
+    plan.hnQ = uniq(plan.hnQ.map(anchor));
+    plan.needQ = uniq(plan.needQ.map(anchor));
+    if (plan.block) plan.block = { ...plan.block, terms: [anchor(plan.block.terms.join(' '))] };
+    plan.queries = { repos: plan.repoQ.map((q) => qStr(q.terms, q.extra)), blocks: plan.block ? [qStr(plan.block.terms, plan.block.extra)] : [], hn: plan.hnQ, needs: plan.needQ };
+    return plan;
+  }
+  function eduMatch(ideaTr, en, atlas) {
+    const f = field(en);
+    return (Array.isArray(atlas?.categories) ? atlas.categories : []).filter((c) => c && c.id && c.title).map((c) => {
+      const hits = new Map();
+      const add = (term, hit) => {
+        const key = trFold(term).trim();
+        if (hit && key && !hits.has(key)) hits.set(key, EDU_GENERIC.has(key) ? 0.12 : words(key).length > 1 ? 0.75 : 0.5);
+      };
+      for (const t of c.keywords || []) if (typeof t === 'string') add(t, has(f, lower(t)));
+      for (const t of c.tr_keywords || []) if (typeof t === 'string') add(t, trTerm(ideaTr, t));
+      const score = [...hits.keys()].some((t) => !EDU_GENERIC.has(t)) ? Math.min(1, [...hits.values()].reduce((a, b) => a + b, 0)) : 0;
+      return { id: c.id, title: c.title, score: Math.round(score * 100) / 100 };
+    }).filter((c) => c.score >= 0.35).sort((a, b) => b.score - a.score || String(a.id).localeCompare(String(b.id)));
+  }
+  function education(idea, en, atlas) {
+    const cats = eduMatch(idea, en, atlas).slice(0, 4);
+    const tr = trFold(idea);
+    const eduTr = /\b(?:egitim[a-z]*|ogret[a-z]*|ogrenci[a-z]*|okul[a-z]*|sinif(?!landir|lama)[a-z]*|ders[a-z]*|sinav[a-z]*|mufredat[a-z]*|kazanim[a-z]*|(?:ana|ilk|orta)okul[a-z]*|lise[a-z]*|lgs|yks|kpss|tyt|ayt|bep|eba|mebbis)\b/.test(tr);
+    const eduEn = /\b(?:education(?:al)?|teachers?|students?|schools?|classrooms?|curriculum|tutors?|tutoring|lessons?|homework|pedagog\w*|exam(?:s)?|literacy|preschool|universit\w*|learning (?:outcomes?|objectives?|analytics)|language learning|spaced repetition|flashcards?|autograders?|rubrics?|assessment|formative assessment|vocabulary|math(?:ematics)?|dyslexia|iep|gamification|flipped classroom|school counseling|parent communication|k[- ]?12|lgs|yks|tyt|ayt|kpss|high school entrance)\b/i.test(en);
+    if (!cats.length && !eduTr && !eduEn && !trConcepts(idea).some((c) => c.edu && !['feedback', 'peer'].includes(c.t))) return null;
+    const levels = [
+      [/\bokul\s+oncesi|\b(?:preschool|early childhood)\b/, 'okul öncesi'],
+      [/\bilkokul|\bprimary\b|\belementary\b/, 'ilkokul'], [/\bortaokul|\blgs\b|\bmiddle school\b|\bhigh school entrance\b/, 'ortaokul'],
+      [/\blise|\b(?:yks|tyt|ayt)\b|\b(?:high|secondary) school\b/, 'lise'], [/\buniversite|\b(?:university|college|higher education)\b/, 'üniversite'],
+      [/\byetiskin|\bkpss\b|\badult\b/, 'yetişkin'], [/\bk[- ]?12\b/, 'K-12'],
+      [/\b(?:schools?|okul[a-z]*)\b|\b(?:ogrenci[a-z]*|students?)\b[\s\S]*\b(?:sinav[a-z]*|exams?)\b|\b(?:sinav[a-z]*|exams?)\b[\s\S]*\b(?:ogrenci[a-z]*|students?)\b/, 'okul'], [/\bogretmen|\bteachers?\b/, 'öğretmen'],
+    ];
+    const context = tr + ' ' + trFold(en);
+    const level = levels.find(([re]) => re.test(context))?.[1];
+    const exams = trExams(context);
+    const examPrep = exams.length > 0 || /\b(?:exams?|sinav[a-z]*)\b/.test(context);
+    const evidence = [], seen = new Set();
+    for (const cat of cats.slice(0, 2)) for (const e of (atlas?.categories || []).find((c) => c.id === cat.id)?.evidence || []) {
+      const url = safeUrl(e.url);
+      if (!url || !e.title || seen.has(url)) continue;
+      seen.add(url); evidence.push({ title: clip(e.title, 240), url, finding: clip(e.finding, 500) });
+    }
+    return { cats, ...(level ? { level } : {}), ...(examPrep ? { examPrep: true } : {}), ...(exams.length ? { exams } : {}), evidence: evidence.slice(0, 4) };
+  }
+  // Ayrıntılı fikir sözcükleri her repoda bulunmaz; kategoriye elle seçilmiş
+  // projelerin adı/açıklaması/etiketlerinde en az bir seçici kategori sözcüğü aranır.
+  const categoryWords = (keywords) => uniq((keywords || []).flatMap(words)).filter((w) => !EDU_GENERIC.has(w) && !STOP.has(w) && !GENERIC.has(w));
+  const curatedRelevant = (r) => r.curated && categoryWords(r.curatedKeywords).some((w) => repoFields(r).some((f) => has(f, w)));
+  function atlasPlan(plan, edu, atlas) {
+    plan.edu = edu;
+    const cat = (atlas?.categories || []).find((c) => c.id === edu?.cats?.[0]?.id);
+    if (!cat || edu.cats[0].score < 0.35) return anchorEduPlan(plan);
+    plan.eduKeywords = cat.keywords || [];
+    const terms = uniq(plan.eduKeywords.flatMap(words)).slice(0, 3);
+    if (terms.length >= 2) {
+      plan.repoQ = [{ terms, extra: '', sort: '', early: true, atlas: true }, ...plan.repoQ.filter((q) => q.terms.join(' ') !== terms.join(' '))].slice(0, 3);
+      plan.queries = { ...plan.queries, repos: plan.repoQ.map((q) => qStr(q.terms, q.extra)) };
+    }
+    return anchorEduPlan(plan);
+  }
+  function atlasRepos(edu, atlas) {
+    return (edu?.cats || []).slice(0, 2).flatMap((match, i) => {
+      const cat = (atlas?.categories || []).find((c) => c.id === match.id);
+      return (cat?.repos || [])
+        .filter((r) => r && /^[\w.-]+\/[\w.-]+$/.test(r.name) && typeof r.desc === 'string' && Number.isFinite(r.stars) && safeUrl(r.url))
+        .map((r) => ({ ...r, curated: true, curatedTop: i === 0, curatedKeywords: cat.keywords || [] }));
+    });
+  }
+  const curatedLimit = (list, limit = 8) => {
+    const reserved = list.filter((r) => r.curatedTop && !r.archived && !r.list && r.reviewOk !== false).slice(0, Math.min(2, limit));
+    let n = 0;
+    const top = list.filter((r) => reserved.includes(r) || !r.curated || ++n <= 3 - reserved.length).slice(0, limit);
+    for (const r of reserved) if (!top.includes(r)) {
+      const i = top.findLastIndex((x) => !reserved.includes(x));
+      if (top.length < limit) top.push(r);
+      else if (i >= 0) top.splice(i, 1, r);
+    }
+    return top;
+  };
 
   // Türkçe metinde sözlük eşleşmeleri (kelime başı öneki)
   function trHits(tr) {
@@ -373,6 +575,11 @@ const LabEngine = (() => {
     const trl = trLower(tr);
     const { nps: phrases, chans } = parseIdea(en, trl, strict);
     const nps = [];
+    const addNp = (n) => {
+      if (n.toks.length > 1 && !n.toks.every(contentTerm)) {
+        n.toks.forEach((t, i) => { if (!termNoise(t)) nps.push({ ...n, toks: [t], acts: i === n.toks.length - 1 ? n.acts : [] }); });
+      } else if (n.toks.every((t) => !termNoise(t))) nps.push(n);
+    };
     const locals = LOCAL.filter(([re]) => re.test(trl) || re.test(trFold(tr)));
     const localT = new Set(locals.map((l) => l[1]));
     for (const n of phrases) {
@@ -384,8 +591,8 @@ const LabEngine = (() => {
         isRole(head.raw, head.w) && (head.pl || AUD_PH.has(head.w) || ORG.has(head.w)) ||
         n.prep === 'for' && separateObject && !WEAK.has(head.w) && !NOT_ROLE.has(head.w)
       );
-      if (n.aud || toks.length <= 2) nps.push({ ...n, toks: uniq(toks).slice(-2) });
-      else for (let i = 0; i < toks.length - 1; i++) nps.push({ ...n, toks: uniq(toks.slice(i, i + 2)), acts: i === toks.length - 2 ? n.acts : [], i: n.i + i / toks.length });
+      if (n.aud || toks.length <= 2) addNp({ ...n, toks: uniq(toks).slice(-2) });
+      else for (let i = 0; i < toks.length - 1; i++) addNp({ ...n, toks: uniq(toks.slice(i, i + 2)), acts: i === toks.length - 2 ? n.acts : [], i: n.i + i / toks.length });
     }
     const valid = nps.filter((n) => n.toks.length);
     const audNp = valid.find((n) => n.aud);
@@ -395,7 +602,7 @@ const LabEngine = (() => {
     const ranked = objs.slice().sort((a, b) => spec(b) - spec(a));
     const seenT = new Set();
     const C = [];
-    const addC = (c) => { if (c && !seenT.has(c.t)) { seenT.add(c.t); C.push(c); } };
+    const addC = (c) => { if (c && !c.toks.some(termNoise) && (c.toks.length < 2 || c.toks.every(contentTerm)) && !seenT.has(c.t)) { seenT.add(c.t); C.push(c); } };
     const main = ranked[0];
     if (main) addC(mkConcept(main.toks.join(' '), main.toks, 'obj', 1, { core: true, main: true, hint: main.hint }));
     const weakAud = !aud || WEAK_AUD.has(aud) || WEAK_AUD.has(audNp.toks[audNp.toks.length - 1]);
@@ -420,6 +627,37 @@ const LabEngine = (() => {
     const channel = chs.slice(0, 3).map((t) => ({ t, syn: CHANNELS[t].syn || [] }));
     const primary = channel.find((c) => c.t !== 'ai') || channel[0];
     if (primary) addC(mkConcept(primary.t, [primary.t], 'ch', CHANNELS[primary.t].pair ? 0.8 : 0.5, {}));
+    // Eğitimde çevirinin ürettiği genel çiftler (teacher teaching vb.) sorguyu
+    // ele geçirmesin. Bilinen kavramı bileşik gürültüden ayır, anlamını koru.
+    const edu = education(tr, en), isEdu = !!edu;
+    if (isEdu) {
+      const noise = EDU_NOISE;
+      const canonical = field(conceptEnglish(en, tr, strict));
+      const known = EDU_CONCEPTS.filter((c) => !EDU_GENERIC.has(c.t) && (
+        !strict && c.re.test(trFold(tr)) || [c.t, ...c.alternatives].some((t) => has(canonical, lower(t)))
+      ));
+      const clean = [], keys = new Set();
+      const add = (c) => { if (!keys.has(c.t)) { keys.add(c.t); clean.push(c); } };
+      for (const c of C) {
+        const matches = known.filter((k) => c.toks.includes(k.t));
+        const separate = matches.length && (c.toks.some((t) => noise.has(t)) || matches.some((k) => ['socratic', 'hint', 'hint-based tutor', 'science', 'misconception', 'exit ticket', 'independent practice', 'mock exam', 'error analysis', 'topic analysis', 'review plan'].includes(k.t)));
+        if (separate) {
+          for (const k of matches) add(mkConcept(k.t, [k.t], 'obj', c.w, { core: true }));
+          const rest = c.toks.filter((t) => !noise.has(t) && !matches.some((k) => k.t === t));
+          if (rest.length) add(mkConcept(rest.join(' '), rest, c.role, c.w, { core: c.core, bonus: c.bonus }));
+        }
+        else if (!(c.toks.length > 1 && c.toks.every((t) => noise.has(t))) && !['revealing', 'clue', 'gradual'].includes(c.t)) add(c);
+      }
+      for (const k of known) if (!clean.some((c) => c.toks.includes(k.t))) add(mkConcept(k.t, [k.t], 'obj', 0.6, { core: true }));
+      // Seçici kavramlar önce; genel kitle ve AI etiketi en sona gelir.
+      const broad = (c) => noise.has(c.t) || /^(?:middle|high|primary|elementary) school$/.test(c.t);
+      clean.sort((a, b) => Number(broad(a)) - Number(broad(b)));
+      for (const c of clean) if (broad(c) && c.role !== 'ch') { c.core = false; c.bonus = true; }
+      clean.forEach((c) => { delete c.main; });
+      const lead = clean.find((c) => c.role === 'obj');
+      if (lead) lead.main = true;
+      C.splice(0, C.length, ...clean);
+    }
     // aynı kelime iki kavramı birden saymasın
     // (ör. diyetisyen ≈ beslenme olursa her beslenme projesi kitleyi de karşılamış sayılırdı)
     for (const c of C) c.alts = c.alts.filter((a, i) => i === 0 || !a.s.some((x) => !c.toks.includes(x) && C.some((o) => o !== c && o.role !== 'act' && (o.t === x || o.toks.includes(x)))));
@@ -434,7 +672,9 @@ const LabEngine = (() => {
         for (const t of c.queryAlts) if (!c.alts.some((a) => a.s.join(' ') === t)) c.alts.push({ s: [t], w: 0.7 });
       }
     }
-    return buildPlan(C, channel, objs.find((n) => n.hint && CHANNELS[n.hint]?.pair) || null);
+    const plan = buildPlan(C, channel, objs.find((n) => n.hint && CHANNELS[n.hint]?.pair) || null);
+    if (isEdu) { plan.edu = edu; plan.terms = plan.terms.slice(0, 5); anchorEduPlan(plan); }
+    return plan;
   }
   // Kavramlardan sorgu kümesi üret (sıra = öncelik; "late" sorgular PRF'den sonra koşar)
   function buildPlan(C, channel, hinted) {
@@ -545,6 +785,13 @@ const LabEngine = (() => {
     if (COPYLEFT.test(s)) return 'copyleft';
     return 'other';
   }
+  // GitHub ham lisansı ve Atlas'ta zenginleştirilmiş lisans aynı biçime iner.
+  function normalizeLicense(license) {
+    const raw = String(license?.spdx_id ?? license?.id ?? (typeof license === 'string' ? license : '')).trim();
+    const id = /^NOASSERTION$/i.test(raw) ? '' : raw;
+    const kind = ['permissive', 'copyleft', 'other', 'none'].includes(license?.kind) ? license.kind : licenseKind(raw);
+    return { id, kind };
+  }
   const fmtNum = (n) => n < 1000 ? String(n) : n < 1e4 ? (n / 1000).toFixed(1).replace('.', ',').replace(',0', '') + ' bin' : n < 1e6 ? Math.round(n / 1000) + ' bin' : (n / 1e6).toFixed(1).replace('.', ',').replace(',0', '') + ' milyon';
   function licenseReason(id, kind) {
     if (kind === 'permissive') return `${id} lisansı: ticari kullanım serbest`;
@@ -579,9 +826,9 @@ const LabEngine = (() => {
   function quality(r) {
     const st = r.stargazers_count ?? r.stars ?? 0, d = daysAgo(r.pushed_at ?? r.pushed);
     const fresh = d <= 90 ? 1 : d <= 365 ? 0.6 : d <= 730 ? 0.3 : 0.1;
-    const lic = { permissive: 1, copyleft: 0.6, other: 0.4, none: 0.2 }[licenseKind(r.license?.spdx_id ?? r.license?.id ?? r.license)];
+    const lic = { permissive: 1, copyleft: 0.6, other: 0.4, none: 0.2 }[normalizeLicense(r.license).kind];
     // yıldız (kanıtlanmışlık) en güçlü sinyal; tazelik ve lisans tek başına denemeyi öne çıkarmasın
-    let q = Math.min(1, Math.log10(st + 1) / 4) * 0.55 + fresh * 0.2 + lic * 0.15 + (r.description || r.homepage ? 0.1 : 0);
+    let q = Math.min(1, Math.log10(st + 1) / 4) * 0.55 + fresh * 0.2 + lic * 0.15 + (r.description || r.desc || r.homepage ? 0.1 : 0);
     if (r.archived) q *= 0.3;
     return q;
   }
@@ -599,10 +846,23 @@ const LabEngine = (() => {
     return 'Açıklaması ' + (script ? script[1] : 'çoğunlukla Latin dışı yazıyla') + '; kodu incelemesi zor olabilir';
   }
   const eligible = (x) => x.bodyMainOk !== false && !x.list && !x.archived && x.reviewOk !== false && (x.fit == null || x.fit >= 6);
+  // İlk Atlas kategorisi güçlü önceliktir; popülerlik tek başına onu aşamaz.
+  const exceedsCurated = (r, c) => !r.curated && (r.coverage || 0) >= (c.coverage || 0) + 2 &&
+    r.rel >= c.rel + 0.1 && r.score >= c.score + 0.05 && r.quality >= c.quality && eligible(r);
+  function eduPriorOrder(list) {
+    const primary = list.filter((r) => r.curatedTop && !r.archived && !r.list && r.reviewOk !== false);
+    if (!primary.length) return list;
+    const exceptional = list.filter((r) => primary.every((c) => exceedsCurated(r, c)));
+    const ordered = [...exceptional, ...primary, ...list.filter((r) => !primary.includes(r) && !exceptional.includes(r))];
+    list.splice(0, list.length, ...ordered);
+    return list;
+  }
   // En iyi temel: ana nesneyi gerçekten karşılayan ilk uygun proje; dizinin başına alınır
   function setBest(list, pick) {
+    eduPriorOrder(list);
     list.forEach((x) => { x.best = false; });
-    const b = pick !== undefined ? (eligible(pick) && pick.mainOk !== false && pick.bestOk !== false ? pick : null) : list.find((x) => eligible(x) && x.mainOk !== false && x.bestOk !== false && (x.fit != null ? x.fit >= 7 : x.score >= 0.55));
+    const canBest = (x) => eligible(x) && (!x.curated || x.stars >= 100) && (x.coverage == null || daysAgo(x.pushed) <= 365);
+    const b = pick !== undefined ? (canBest(pick) && pick.mainOk !== false && pick.bestOk !== false ? pick : null) : list.find((x) => canBest(x) && x.mainOk !== false && x.bestOk !== false && (x.fit != null ? x.fit >= 7 : x.score >= 0.55));
     if (b) { b.best = true; list.splice(list.indexOf(b), 1); list.unshift(b); }
     return list;
   }
@@ -611,7 +871,8 @@ const LabEngine = (() => {
     const core = cs.filter((c) => c.core), main = cs.find((c) => c.main);
     for (const r of repos || []) {
       const name = r.full_name || r.name;
-      if (!name || seen.has(lower(name))) continue;
+      if (schoolLevel(plan.edu) && professionalPrep(r)) continue;
+      if (!name || seen.has(lower(name)) || (plan.edu && !r.curated && !repoEduAnchor(r))) continue;
       seen.add(lower(name));
       const stars = r.stargazers_count ?? r.stars ?? 0;
       if (r.fork && stars < 50) continue;
@@ -620,7 +881,8 @@ const LabEngine = (() => {
       const { rel, hits, bodyMainOk } = relevance(r, cs);
       const full = (c) => hits.some((h) => h.c === c && h.full >= 0.7);
       // tek bir genel kelimeyle (ör. yalnızca "nutrition") eşleşen projeler elenir
-      if (!hits.some((h) => h.full && h.c.role !== 'ch')) continue;
+      const categoryOk = curatedRelevant(r), examLocal = localExamMatch(r, plan.edu);
+      if (!categoryOk && !examLocal && !hits.some((h) => h.full && h.c.role !== 'ch')) continue;
       const mainOk = main ? full(main) : true;
       // Geniş yerel kitle araması: açıklamadaki alan başka bir alternatifle adda
       // doğrulanıyorsa keşifte tut (condo adı + property management açıklaması gibi).
@@ -630,8 +892,8 @@ const LabEngine = (() => {
         const distinct = words(t).filter((w) => !GENERIC.has(w) && !words(audDesc.s.join(' ')).includes(w));
         return distinct.length && distinct.every((w) => has(repoFields(r)[0], w));
       });
-      if (rel < 0.25 && !namedAudience && !(main && hits.some((h) => h.c === main && h.full && h.where === 0))) continue;
-      const local = hits.some((h) => h.full && h.c.role === 'loc');
+      if (!categoryOk && !examLocal && rel < 0.25 && !namedAudience && !(main && hits.some((h) => h.c === main && h.full && h.where === 0))) continue;
+      const local = examLocal || hits.some((h) => h.full && h.c.role === 'loc');
       const desc = r.description || r.desc || '';
       const nonLatin = descriptionWarning(desc);
       // README getirmiyoruz; boş açıklamada etiketleri bağımsız bir kanıt gibi kullanma.
@@ -641,6 +903,13 @@ const LabEngine = (() => {
       const reviewWarning = nonLatin || (topicsOnly ? 'Açıklama/README kanıtı yok; eşleşme yalnızca konu etiketlerinde' : '');
       const reviewOk = !reviewWarning;
       const q = quality(r);
+      const used = new Set();
+      const coverage = hits.filter((h) => h.full >= 0.7 && h.c.core && !['ch', 's', 'prf'].includes(h.c.role)).filter((h) => {
+        const keys = words(h.s.join(' ')).map(stem);
+        if (!keys.length || keys.some((k) => used.has(k))) return false;
+        keys.forEach((k) => used.add(k));
+        return true;
+      }).length;
       // az yıldızlı denemeler gerçek temelleri gölgelemesin
       let score = 0.55 * rel + 0.45 * q;
       if (stars < 5) score *= 0.75;
@@ -650,31 +919,37 @@ const LabEngine = (() => {
       else if (topicsOnly) score *= 0.65;
       if (!mainOk) score *= 0.8;
       if (mainOk && !bodyMainOk) score = Math.min(score * 0.4, 0.2);
-      const list = /(^|[-_.])awesome([-_.]|$)/i.test(name.split('/').pop()) || /^(a )?(curated|awesome) list/i.test(r.description || '');
+      if (r.curated) score = Math.min(1, score + 0.025);
+      if (examLocal) score = Math.min(1, score + 0.08);
+      const list = /(^|[-_.])awesome([-_.]|$)/i.test(name.split('/').pop()) || /^(a )?(curated|awesome) list/i.test(r.description || r.desc || '');
       if (list) score *= 0.8;
-      const lid = r.license?.spdx_id ?? r.license?.id ?? (typeof r.license === 'string' ? r.license : '');
-      const id = lid === 'NOASSERTION' ? '' : lid || '';
-      const kind = lid === 'NOASSERTION' ? 'other' : licenseKind(id);
+      const { id, kind } = normalizeLicense(r.license);
       const loc = cs.find((c) => c.role === 'loc');
       out.push({
         name, url, desc: clip(desc, 300), desc_tr: clip(desc, 300), stars, forks: r.forks_count ?? r.forks ?? 0,
         pushed: ts(r.pushed_at ?? r.pushed) || 0, created: ts(r.created_at ?? r.created) || 0, lang: r.language ?? r.lang ?? '',
         topics: (r.topics || []).slice(0, 8), license: { id, kind }, archived: !!r.archived, homepage: safeUrl(r.homepage) || '',
-        score: Math.round(score * 1000) / 1000, rel: Math.round(rel * 100) / 100, best: false, mainOk, bodyMainOk, reviewOk, ...(reviewWarning ? { reviewWarning } : {}), bestOk: reviewOk && mainOk && bodyMainOk && (!main || main.toks.length > 1 || core.length <= 1 || cs.filter((c) => c.role !== 'ch' && full(c)).length >= 2),
+        ...(plan.edu ? { coverage, quality: q } : {}),
+        score: Math.round(score * 1000) / 1000, rel: Math.round(rel * 100) / 100, best: false, mainOk, bodyMainOk, reviewOk, ...(reviewWarning ? { reviewWarning } : {}), bestOk: (!schoolLevel(plan.edu) || stars >= 100) && reviewOk && mainOk && bodyMainOk && (!main || main.toks.length > 1 || core.length <= 1 || cs.filter((c) => c.role !== 'ch' && full(c)).length >= 2),
         cov: core.filter(full).map((c) => label(c, plan)), miss: core.filter((c) => !full(c)).map((c) => label(c, plan)),
-        ...(list ? { list: true } : {}), ...(local ? { local: true } : {}),
-        why: [reviewWarning, list ? 'Derlenmiş liste: fork için değil, keşif için iyi' : local && loc ? `Türkiye’ye özgü: ${label(loc, plan)} ile çalışıyor` : matchReason(hits, plan), licenseReason(id || 'Bu', kind), freshReason(r)].filter(Boolean).slice(0, 3),
+        ...(list ? { list: true } : {}), ...(local ? { local: true } : {}), ...(r.curated ? { curated: true, curatedTop: !!r.curatedTop && !!categoryOk } : {}),
+        why: [reviewWarning, examLocal ? 'Türkiye’deki sınava yönelik' : '', list ? 'Derlenmiş liste: fork için değil, keşif için iyi' : examLocal ? '' : local && loc ? `Türkiye’ye özgü: ${label(loc, plan)} ile çalışıyor` : matchReason(hits, plan), licenseReason(id || 'Bu', kind), freshReason(r)].filter(Boolean).slice(0, 3),
       });
     }
+    for (const r of out) if (r.curated) r.why = [...r.why.slice(0, 2), 'Eğitim Atlası’nda öneriliyor'];
     out.sort((a, b) => b.score - a.score || b.stars - a.stars);
     // puanlar başa baş ise kanıtlanmış (çok daha fazla yıldızlı) proje öne geçer
     const alt = out[0] && out[0].stars < 50 ? out.slice(1, 4).find((x) => out[0].score - x.score <= 0.04 && x.stars >= 100 && x.stars >= out[0].stars * 5 && !x.list && x.mainOk) : null;
     if (alt) out.splice(out.indexOf(alt), 1), out.unshift(alt);
-    const top = out.slice(0, limit);
+    if (plan.edu) eduPriorOrder(out);
+    const top = curatedLimit(out, limit);
     // Türkiye'ye özgü eşleşmeler (ör. GİB e-fatura kütüphaneleri) en az iki sırada yer alsın
     const locs = out.slice(limit).filter((x) => x.local && x.stars >= 10).slice(0, Math.max(0, 2 - top.filter((x) => x.local).length));
-    if (locs.length && top.length >= locs.length) top.splice(top.length - locs.length, locs.length, ...locs);
-    return setBest(top);
+    for (const local of locs) {
+      const i = top.findLastIndex((x) => !x.local && !x.curatedTop);
+      if (i >= 0) top.splice(i, 1, local);
+    }
+    return setBest(curatedLimit(top, limit));
   }
   // Konu (topic) geri beslemesi: en az iki fikir kavramını karşılayan projelerde tekrar eden konular
   const TOPIC_STOP = new Set('javascript typescript python react reactjs nextjs next vue vuejs angular svelte django flask fastapi laravel php java kotlin swift flutter dart android ios nodejs node express html css tailwind tailwindcss docker mongodb mysql postgresql postgres sqlite firebase supabase hacktoberfest open-source opensource self-hosted selfhosted ai llm openai chatgpt gpt mcp machine-learning deep-learning api rest-api web webapp website app mobile saas dashboard fullstack full-stack mern golang go rust ruby rails csharp dotnet spring-boot bootstrap jquery electron chrome-extension portfolio project school-project university-project beginner tutorial'.split(' '));
@@ -745,7 +1020,7 @@ const LabEngine = (() => {
       const m = NEED_RE.exec(text);
       if (!m || JOB_RE.test(text)) continue;
       const snip = windowAround(text, m.index);
-      if (snip.length < 40) continue;
+      if (snip.length < 40 || (plan.edu && !hasEduAnchor(snip))) continue;
       // alan kavramı alıntının içinde olmalı: ya iki ayrı kavram, ya da ana kavramın kendisi + ürün sözcüğü
       const sh = conceptHits(snip, plan);
       const dom = sh.filter((x) => x.c.role !== 'ch');
@@ -767,18 +1042,20 @@ const LabEngine = (() => {
 
   // ─── Karar ────────────────────────────────────────────────────────────
   function verdict(r) {
-    const repos = r.repos || [], prods = (r.products || []).length;
+    const repos = (r.repos || []).filter((x) => !schoolLevel(r.edu) || !professionalPrep(x)).filter((x) => !r.edu || x.curated || (repoEduAnchor(x) && (x.coverage ?? x.cov?.length ?? 0) >= 2 && (x.rel ?? x.score ?? 0) >= 0.5)), prods = (r.products || []).length;
     const relOf = (x) => x.rel ?? x.score ?? 0;
     const fresh = (x) => daysAgo(x.pushed) <= 365;
     const relevant = repos.filter((x) => relOf(x) >= 0.5 && x.mainOk !== false).length;
     const ghFail = (r.sources || []).some((s) => s.id === 'github' && !s.ok);
-    const fork = repos.find((x) => eligible(x) && !(x.miss || []).length && x.mainOk !== false && relOf(x) >= 0.6 && x.stars >= 100 && x.license?.kind === 'permissive' && fresh(x));
+    const fork = repos.find((x) => eligible(x) && x.bestOk !== false && !(x.miss || []).length && x.mainOk !== false && relOf(x) >= 0.6 && x.stars >= 100 && x.license?.kind === 'permissive' && fresh(x));
     // kısmi temel: ana işi karşılayanlar içinde alaka ile kanıtlanmışlığı (yıldız) birlikte en iyi olan
     const pv = (x) => 0.5 * relOf(x) + 0.5 * Math.min(1, Math.log10((x.stars || 0) + 1) / 4);
-    const part = !fork && repos.filter((x) => eligible(x) && x.mainOk !== false && (x.cov || []).length && (x.miss || []).length && relOf(x) >= 0.3 && x.stars >= 100 && fresh(x)).sort((a, b) => pv(b) - pv(a))[0];
+    const partials = repos.filter((x) => eligible(x) && x.bestOk !== false && x.mainOk !== false && (x.cov || []).length && (x.miss || []).length && relOf(x) >= 0.3 && x.stars >= 100 && fresh(x));
+    const part = !fork && (partials.find((x) => x.best && x.curated) || partials.sort((a, b) => pv(b) - pv(a))[0]);
     let kind, text, name = '';
     if (fork) { kind = 'fork'; name = fork.name; text = `Sıfırdan başlama: **${fork.name}** sağlam bir temel. Fork’layıp kendi ihtiyacına uyarla.`; }
-    else if (part) { kind = 'build'; name = part.name; text = `Tam karşılığı yok ama parçaları var: **${part.name}** ${joinTr(part.cov)} için sağlam bir başlangıç; ${joinTr(part.miss)} kısmını kendin eklemelisin.`; }
+    else if (part) { kind = 'build'; name = part.name; text = `Tam karşılığı yok ama parçaları var: **${part.name}** ${joinTr(part.cov)} için sağlam bir başlangıç; ${joinTr(part.miss.slice(0, 2))} kısmını kendin eklemelisin.`; }
+    else if (schoolLevel(r.edu) && !repos.some((x) => eligible(x) && x.stars >= 100)) { kind = 'gap'; text = 'Bu okul sınavı için benimsenmiş bir açık kaynak temel bulunamadı. Önce küçük bir pilotla ihtiyacı doğrula.'; }
     else if (prods >= 4 || relevant >= 5) { kind = 'crowded'; text = 'Bu alanda çok deneme var. Farkını tek cümleyle netleştirmeden başlama.'; }
     else if (ghFail && repos.length <= 2) { kind = 'build'; text = 'GitHub taraması yarım kaldı; örnekler eksik olabilir. Biraz sonra tekrar dene.'; }
     else if (relevant <= 2 && prods <= 1) { kind = 'gap'; text = (r.sources || []).some((s) => s.id === 'github' && s.total === 0) ? 'Bu terimlerle açık kaynak örnek bulamadık; terimleri “Düzenle” ile genişletmeyi dene. Az örnek olması bir fırsat da olabilir — önce talebi doğrula.' : 'Az örnek bulundu. Bu bir fırsat olabilir ama önce talebi doğrula.'; }
@@ -908,6 +1185,66 @@ const LabEngine = (() => {
     return r.data.hits;
   }
 
+
+  const EDU_BROAD = new Set([...EDU_GENERIC, 'teaching', 'question', 'concept', 'exam', 'middle school', 'high school', 'university', 'college']);
+  function educatorSearch(plan, en) {
+    const text = lower(en);
+    const math = /\b(?:maths?|mathematics|algebra|geometry|calculus)\b/.test(text);
+    const code = /\b(?:coding|programming|computer science|autograder)\b/.test(text);
+    const higher = /\b(?:universit\w*|college|higher (?:education|ed)|undergraduate|postgraduate)\b/.test(text);
+    const sites = [...(math ? ['matheducators'] : []), ...(code ? ['cseducators'] : []), ...(higher ? ['academia'] : [])];
+    const specificity = (c) => (EDU_CONCEPTS.some((k) => k.t === c.t) ? 2 : 0) + Math.min(2, words(c.t).length) * 0.3 - (['math', 'science', 'programming education', 'computer science'].includes(c.t) ? 1 : 0);
+    const domain = plan.domain.flatMap((c) => c.toks.length > 1 && c.toks.some((t) => EDU_CONCEPTS.some((k) => k.t === t))
+      ? c.toks.map((t) => mkConcept(t, [t], c.role, c.w)) : [c]);
+    const specific = domain.filter((c) => c.role !== 'loc' && !EDU_BROAD.has(c.t) && !c.toks.every((t) => EDU_BROAD.has(t)))
+      .slice().sort((a, b) => specificity(b) - specificity(a) || b.w - a.w);
+    const terms = uniq(specific.map((c) => c.t)).slice(0, 2);
+    return { sites, query: terms.join(' '), specific };
+  }
+  function educatorRelevant(title, specific, keywords) {
+    const f = field(title);
+    const matches = specific.map((c) => ({ c, hit: hitIn(c, [f]) })).filter((x) => x.hit.full >= 0.7)
+      .map((x) => uniq(x.hit.s.flatMap(words).filter((w) => !EDU_BROAD.has(w)).map(stem))).filter((ws) => ws.length);
+    // Aynı sözcük iki iç içe kavramı karşılıyorsa ikinci kanıt sayılmaz.
+    if (matches.some((a, i) => matches.some((b, j) => i !== j && a.every((w) => !b.includes(w))))) return true;
+    return matches.some((matched) => (keywords || []).some((k) => has(f, lower(k)) && categoryWords([k]).map(stem).some((w) => !matched.includes(w))));
+  }
+  async function educatorNeeds(ctx, plan, en) {
+    const { sites, query, specific } = educatorSearch(plan, en);
+    if (!sites.length || !query) return null;
+    const needs = [], quotas = [];
+    let failure = null, success = 0;
+    for (const site of sites) {
+      try {
+        const url = 'https://api.stackexchange.com/2.3/search/advanced?' + new URLSearchParams({ order: 'desc', sort: 'relevance', q: query, site, pagesize: '10', filter: 'default' });
+        // API hata/backoff yanıtları önbellekte kalmasın.
+        const apiCache = ctx.cache && { get: (k) => ctx.cache.get(k), set: (k, v) => { if (!v.v?.error_id && !v.v?.backoff) ctx.cache.set(k, v); } };
+        const r = await getJSON({ ...ctx, cache: apiCache }, url);
+        const d = r.data;
+        if (Number.isFinite(d?.quota_remaining)) quotas.push(d.quota_remaining);
+        if (d?.backoff || d?.error_id || !r.ok || !Array.isArray(d?.items)) {
+          const rate = !!d?.backoff || d?.quota_remaining === 0 || [403, 429, 502].includes(d?.error_id) || r.status === 429;
+          failure = { kind: rate ? 'rate' : 'network', error: d?.backoff ? 'Eğitimci soruları için kısa bir bekleme gerekiyor' : 'Eğitimci soruları alınamadı',
+            ...(d?.backoff ? { resetAt: Date.now() + Math.max(1, +d.backoff || 1) * 1000 } : {}) };
+          if (d?.backoff || rate) break;
+          continue;
+        }
+        success++;
+        for (const item of d.items) {
+          const url = safeUrl(item.link), text = stripHtml(item.title);
+          if (url && text && educatorRelevant(text, specific, plan.eduKeywords)) needs.push({ text: clip(text, 300), text_tr: clip(text, 300), url, source: 'Eğitimci sorusu', date: (+item.creation_date || 0) * 1000, votes: +item.score || 0, where: site });
+        }
+        if (d.quota_remaining === 0) { failure = { kind: 'rate', error: 'Eğitimci soruları için günlük arama sınırına ulaşıldı' }; break; }
+      } catch (e) {
+        if (e.name === 'AbortError') throw e;
+        failure = { kind: e.kind || 'network', error: e.message };
+      }
+    }
+    const seen = new Set();
+    const items = needs.sort((a, b) => b.votes - a.votes || b.date - a.date).filter((n) => { if (seen.has(n.url)) return false; seen.add(n.url); return true; }).slice(0, 6);
+    return { items, source: { ok: !failure, n: items.length, ...(quotas.length ? { quota_remaining: Math.min(...quotas) } : {}), ...(failure ? { ...failure, ...(success ? { partial: true } : {}) } : {}) } };
+  }
+
   // ─── Claude (akıllı mod) ──────────────────────────────────────────────
   function parseLoose(text, open) {
     const s = String(text || '');
@@ -950,6 +1287,10 @@ const LabEngine = (() => {
   function smartPlan(base, p, tr = '', strict = false) {
     const fix = (qs) => uniq(qs.map((q) => conceptEnglish(q, tr, strict, false)));
     p = { ...p, repos: fix(p.repos), hn: fix(p.hn), needs: fix(p.needs) };
+    if (base.edu) {
+      const specific = p.repos.filter((q) => !words(q).every((w) => EDU_NOISE.has(w)));
+      p.repos = specific.length ? specific : base.repoQ.map((q) => q.terms.join(' '));
+    }
     const plan = { ...base, smart: true };
     plan.repoQ = p.repos.map((q, i) => ({ terms: q.split(' '), extra: i === 0 ? '' : i === 1 ? 'stars:>=5' : 'stars:>=20', sort: i === 2 ? 'stars' : '', [i === 2 ? 'late' : 'early']: true }));
     const chB = base.block;
@@ -957,7 +1298,7 @@ const LabEngine = (() => {
     plan.hnQ = p.hn.length ? p.hn : base.hnQ;
     plan.needQ = p.needs.length ? [p.needs.slice(0, 2).join(' ')] : base.needQ;
     const known = new Set(concepts(base).flatMap((c) => [c.t, ...c.toks, ...c.syn]));
-    const extra = uniq(p.repos.concat(p.blocks).flatMap((q) => q.split(' ')).map(singular).filter((w) => w.length > 2 && !STOP.has(w) && !GENERIC.has(w) && !known.has(w))).slice(0, 6);
+    const extra = uniq(p.repos.concat(p.blocks).flatMap((q) => q.split(' ')).map(singular).filter((w) => w.length > 2 && !termNoise(w) && !known.has(w))).slice(0, 6);
     plan.extraC = extra.map((x) => mkConcept(x, [x], 's', 0.4, { bonus: true }));
     if (!base.concepts.some((c) => c.main)) {
       const toks = p.repos[0].split(' ').slice(0, 2).map(singular);
@@ -985,8 +1326,9 @@ const LabEngine = (() => {
     const unscored = top.filter((r) => !f(r)); // puanlanmayanlar sezgisel sırayla sonra gelir
     const good = scored.filter((r) => f(r).fit >= 4);
     const fallback = scored.filter((r) => f(r).fit < 4).slice(0, Math.max(0, 3 - good.length - unscored.length));
-    const out = [...good, ...fallback, ...unscored];
-    return out.slice(0, 8).map((r) => (f(r) ? { ...r, fit: f(r).fit, why: [r.reviewWarning, f(r).why, licenseReason(r.license.id || 'Bu', r.license.kind), freshReason({ ...r, pushed_at: r.pushed, stargazers_count: r.stars })].filter(Boolean).slice(0, 3) } : { ...r }));
+    const out = [...good, ...fallback, ...unscored, ...scored.filter((r) => r.curatedTop && f(r).fit < 4 && !fallback.includes(r))];
+    if (R.edu) eduPriorOrder(out);
+    return curatedLimit(out).map((r) => (f(r) ? { ...r, fit: f(r).fit, why: [r.reviewWarning, r.why.includes('Türkiye’deki sınava yönelik') ? 'Türkiye’deki sınava yönelik' : '', f(r).why, r.curated ? 'Eğitim Atlası’nda öneriliyor' : '', licenseReason(r.license.id || 'Bu', r.license.kind), freshReason({ ...r, pushed_at: r.pushed, stargazers_count: r.stars })].filter(Boolean).slice(0, 3) } : { ...r }));
   }
 
   // ─── Araştırma akışı ──────────────────────────────────────────────────
@@ -1012,7 +1354,7 @@ const LabEngine = (() => {
     // Biçim sözcükleri birlikte bile alanı tanımlamaz: NBA "video clips" ≠ podcast klipleri.
     const form = new Set('video audio clip episode recording content media'.split(' '));
     for (const h of hits) {
-      if (!h.title || seen.has(h.objectID)) continue;
+      if (!h.title || seen.has(h.objectID) || (plan.edu && !hasEduAnchor(h.title))) continue;
       seen.add(h.objectID);
       const hn = safeUrl(`https://news.ycombinator.com/item?id=${encodeURIComponent(h.objectID)}`);
       const show = /^show hn/i.test(h.title) || (h._tags || []).includes('show_hn');
@@ -1061,7 +1403,7 @@ const LabEngine = (() => {
     const ctx = { fetch: f, signal, cache: opts.cache, token: opts.githubToken, claudeKey: opts.claudeKey, gh: { used: 0, net: 0, calls: [], budget: opts.githubToken ? 8 : GH_BUDGET } };
     const at = Date.now();
     const R = { v: 1, id: hash(idea + at), idea, en: '', at, smart: false, summary: null, terms: [], queries: { repos: [], blocks: [], hn: [], needs: [] },
-      repos: [], blocks: [], products: [], radar: [], needs: [], verdict: null, stats: { repos: 0, products: 0, needs: 0 }, sources: [] };
+      repos: [], blocks: [], products: [], radar: [], needs: [], edu: null, verdict: null, stats: { repos: 0, products: 0, needs: 0 }, sources: [] };
     const src = (id, o) => { const i = R.sources.findIndex((s) => s.id === id); const v = { id, ...o }; if (i >= 0) R.sources[i] = v; else R.sources.push(v); };
     const emit = (stage) => { if (signal?.aborted) throw abortErr(); R.stats = { repos: R.repos.length, products: R.products.length, needs: R.needs.length }; try { opts.onUpdate?.(stage, snapshot(R)); } catch {} };
     const fail = (e) => { if (e?.name === 'AbortError' || signal?.aborted) throw abortErr(); return { error: e?.message || 'Hata', kind: e?.kind || 'network' }; };
@@ -1083,6 +1425,7 @@ const LabEngine = (() => {
       }
     }
     if (!enOpt) R.en = conceptEnglish(R.en, tr);
+    R.edu = education(idea, R.en, opts.atlas);
     emit('translate');
 
     // 2) Plan
@@ -1098,7 +1441,8 @@ const LabEngine = (() => {
         src('claude', { ok: true, n: 1 });
       } catch (e) { src('claude', { ok: false, n: 0, ...fail(e) }); }
     }
-    R.terms = plan.terms;
+    if (R.edu) plan = atlasPlan(plan, R.edu, opts.atlas);
+    R.terms = R.edu ? plan.terms.slice(0, 5) : plan.terms;
     R.queries = plan.queries;
     emit('plan');
     // kavram etiketlerinin Türkçesi GitHub aramasıyla paralel gelir
@@ -1106,6 +1450,8 @@ const LabEngine = (() => {
 
     // 3) GitHub ve HN paralel
     let issues = [], pool = [];
+    const curated = atlasRepos(R.edu, opts.atlas), curatedByName = new Map(curated.map((r) => [lower(r.name), r]));
+    const educatorTask = R.edu ? educatorNeeds(ctx, plan, R.en) : Promise.resolve(null);
     const ghTask = (async () => {
       const g = ctx.gh, raw = [];
       let feedback = null;
@@ -1117,6 +1463,7 @@ const LabEngine = (() => {
       const relevantCount = () => rankRepos(raw, plan, 30).filter((r) => r.mainOk && r.rel >= 0.5).length;
       const key = (terms) => terms.slice().sort().join('|');
       const searchRepo = async (q) => {
+        if (plan.edu && !q.examHint) q = { ...q, terms: [eduQuery(q.terms.join(' '), plan)] };
         if (!room() || searched.has(key(q.terms))) return null;
         // Az ilgili örnek varsa sonraki sorgular yıldız eşiği yüzünden örnekleri kaybetmesin.
         const extra = searched.size && relevantCount() < 3 ? (q.extra || '').replace(/stars:\S+/g, '').trim() : q.extra;
@@ -1133,7 +1480,7 @@ const LabEngine = (() => {
       };
       const broaden = async (q) => {
         // Önce sıradaki alternatif ifade; yoksa ek sözcükleri at. Yıldız filtresi yok.
-        const candidates = [...(plan.broadQ || []), ...(q ? [q.terms[0]] : [])].map((t) => [t]);
+        const candidates = [...(plan.broadQ || []), ...(q ? [q.terms[0]] : [])].map((t) => [plan.edu ? eduQuery(t, plan) : t]);
         const terms = candidates.find((t) => t[0] && !searched.has(key(t)));
         if (terms) return searchRepo({ terms, extra: '', sort: 'stars' });
         return null;
@@ -1142,16 +1489,16 @@ const LabEngine = (() => {
       for (const q of early) {
         if (!room()) break;
         const d = await searchRepo(q);
-        if (d && (d.items.length < 3 || relevantCount() < 3) && room()) await broaden(q);
+        if (!schoolExam(plan.edu) && !q.atlas && d && (d.items.length < 3 || relevantCount() < 3) && room()) await broaden(q);
       }
       // Seyrek sonuçlarda rafine topic araması yerine geniş terimlere bütçe bırak.
       const topic = room() && relevantCount() >= 3 ? pickTopic(feedback, plan) : null;
       if (topic) {
         plan.prfC = mkConcept(topic.replace(/-/g, ' '), topic.split('-'), 'prf', 0.3, { bonus: true });
         plan.prfC.alts.push({ s: [topic], w: 1 });
-        const q = `topic:${topic} stars:>=3`;
+        const q = `topic:${topic}${plan.edu ? ' ' + eduQuery(topic.replace(/-/g, ' '), plan) : ''} stars:>=3`;
         R.queries = { ...R.queries, repos: [...R.queries.repos, q] };
-        R.terms = uniq([...R.terms, 'topic:' + topic]).slice(0, 9);
+        R.terms = uniq([...R.terms, 'topic:' + topic]).slice(0, R.edu ? 5 : 9);
         const d = await ghSearch(ctx, 'repositories', q, 'stars', repoLimit());
         if (d) { totalHits += Math.max(d.total || 0, d.items.length); raw.push(...d.items); }
         actualQueries.push(q);
@@ -1167,8 +1514,9 @@ const LabEngine = (() => {
       }
       R.queries = { ...R.queries, repos: actualQueries };
       plan.labels = await labelsP;
-      pool = rankRepos(raw, plan, 15); // akıllı sıralama için geniş havuz (sonuca yazılmaz)
-      R.repos = rankRepos(raw, plan);
+      const candidates = [...raw.map((r) => curatedByName.has(lower(r.full_name)) ? { ...curatedByName.get(lower(r.full_name)), ...r, curated: true } : r), ...curated];
+      pool = rankRepos(candidates, plan, 15); // akıllı sıralama için geniş havuz (sonuca yazılmaz)
+      R.repos = rankRepos(candidates, plan);
       if (plan.block) {
         const d = await ghSearch(ctx, 'repositories', `${plan.block.terms[0]} ${plan.block.extra}`, 'stars', g.budget - 1);
         const bw = CHANNELS[plan.block.ch]?.bw || [plan.block.ch || plan.block.terms[0]];
@@ -1177,20 +1525,20 @@ const LabEngine = (() => {
           const nm = String(r.full_name || '').split('/')[1] || '';
           const fld = field(`${nm} ${(r.topics || []).join(' ')}`, 1, false);
           fld.raw = lower(nm).replace(/[^a-z0-9]/g, '');
-          return !r.archived && r.description && !/awesome|clone|interview|roadmap|tutorial/i.test(nm) && bw.some((w) => has(fld, w));
+          return (!schoolLevel(plan.edu) || !professionalPrep(r)) && (!plan.edu || repoEduAnchor(r) || curatedByName.has(lower(r.full_name))) && !r.archived && r.description && !/awesome|clone|interview|roadmap|tutorial/i.test(nm) && bw.some((w) => has(fld, w));
         }).filter((r) => !R.repos.some((x) => lower(x.name) === lower(r.full_name))).slice(0, 4).map((r) => {
-          const id = r.license?.spdx_id === 'NOASSERTION' ? '' : r.license?.spdx_id || '';
-          return { name: r.full_name, url: safeUrl(r.html_url), desc: clip(r.description, 300), desc_tr: clip(r.description, 300), stars: r.stargazers_count, license: { id, kind: r.license?.spdx_id === 'NOASSERTION' ? 'other' : licenseKind(id) }, purpose_tr: plan.block.purpose_tr };
+          return { name: r.full_name, url: safeUrl(r.html_url), desc: clip(r.description, 300), desc_tr: clip(r.description, 300), stars: r.stargazers_count, license: normalizeLicense(r.license), purpose_tr: plan.block.purpose_tr };
         }).filter((b) => b.url);
       }
       // İstekler: ana işi karşılayan önde gelen projelerin en çok 👍 alan açık konuları, yoksa terim araması
       const lead = R.repos.filter((x) => x.stars >= 100 && !x.archived && x.mainOk).slice(0, 3).map((x) => x.name);
-      const iq = lead.length ? `${lead.map((n) => 'repo:' + n).join(' ')} is:issue is:open` : plan.needQ[0] ? `${plan.needQ[0]} is:issue is:open` : '';
+      const issueDomain = plan.edu ? eduQuery(plan.needQ[0] || '', plan) + ' ' : '';
+      const iq = lead.length ? `${lead.map((n) => 'repo:' + n).join(' ')} ${issueDomain}is:issue is:open` : plan.needQ[0] ? `${plan.needQ[0]} is:issue is:open` : '';
       if (iq) {
         const d = await ghSearch(ctx, 'issues', iq, 'reactions-+1');
         const FEAT = /\b(feature|request|support|add|allow|integrat|option|ability|would be (nice|great))/i;
         // yalnızca fikirle ilgili konular (alan kavramı başlıkta geçmeli); özellik istekleri öne
-        issues = (d?.items || []).filter((i) => !i.pr && i.plus1 >= 3).map((i) => ({ i, hs: conceptHits(i.title, plan).filter((x) => !['s', 'ch', 'prf'].includes(x.c.role)) }))
+        issues = (d?.items || []).filter((i) => !i.pr && i.plus1 >= 3 && (!plan.edu || hasEduAnchor(i.title))).map((i) => ({ i, hs: conceptHits(i.title, plan).filter((x) => !['s', 'ch', 'prf'].includes(x.c.role)) }))
           .filter((x) => x.hs.length).sort((a, b) => (b.hs.length + (FEAT.test(b.i.title) ? 0.5 : 0)) - (a.hs.length + (FEAT.test(a.i.title) ? 0.5 : 0)) || b.i.plus1 - a.i.plus1)
           .slice(0, 6).map(({ i }) => ({
             text: clip(i.title, 260), text_tr: clip(i.title, 260), url: safeUrl(i.html_url), source: 'GitHub isteği', date: ts(i.created_at), votes: i.plus1,
@@ -1202,7 +1550,7 @@ const LabEngine = (() => {
     })();
     let hnErr = null, hnN = 0, hnAll = 0;
     const hnTask = (async () => {
-      const opt = (q) => q.split(' ').slice(1).join(' ');
+      const opt = (q) => q.split(' ').slice(1).filter((w) => !plan.edu || !hasEduAnchor(w)).join(' ');
       const q0 = plan.hnQ[0] || '';
       const nq = plan.needQ[0] || q0;
       // ilk terim zorunlu, diğerleri ve eş anlamlılar isteğe bağlı (Algolia optionalWords)
@@ -1211,7 +1559,7 @@ const LabEngine = (() => {
         q0 && hnSearch(ctx, { tags: 'show_hn', query: q0, optionalWords: opt(q0), hitsPerPage: 15 }),
         plan.hnQ[1] && hnSearch(ctx, { tags: 'show_hn', query: plan.hnQ[1], optionalWords: opt(plan.hnQ[1]), hitsPerPage: 15 }),
         q0 && hnSearch(ctx, { tags: 'story', query: q0, numericFilters: 'points>15', hitsPerPage: 15 }),
-        ...(nq ? ['I wish', 'would pay', 'looking for', 'is there a'].map((ph) => hnSearch(ctx, { tags: 'comment', query: `${nw.join(' ')} "${ph}"`, optionalWords: nw.slice(1).join(' '), hitsPerPage: 40 })) : []),
+        ...(nq ? ['I wish', 'would pay', 'looking for', 'is there a'].map((ph) => hnSearch(ctx, { tags: 'comment', query: `${nw.join(' ')} "${ph}"`, optionalWords: opt(nw.join(' ')), hitsPerPage: 40 })) : []),
       ].filter(Boolean);
       const res = await Promise.allSettled(calls);
       if (signal?.aborted) throw abortErr();
@@ -1229,10 +1577,11 @@ const LabEngine = (() => {
       hnN = res.filter((x) => x.status === 'fulfilled').length;
       hnAll = res.length;
     })();
-    await Promise.all([ghTask, hnTask]);
+    const [, , educator] = await Promise.all([ghTask, hnTask, educatorTask]);
+    if (educator) src('stackexchange', educator.source);
     const hnNeeds = R.hnNeeds || [];
     delete R.hnNeeds;
-    R.needs = [...hnNeeds.slice(0, 4), ...issues.slice(0, 3), ...hnNeeds.slice(4)].slice(0, 6);
+    R.needs = [...(educator?.items || []).slice(0, 3), ...hnNeeds.slice(0, 4), ...issues.slice(0, 3), ...(educator?.items || []).slice(3), ...hnNeeds.slice(4)].slice(0, 6);
     // kısmi HN hatası da görünür olsun (arayüz ok:false kaynakları gösterir)
     src('hn', hnErr && !hnN ? { ok: false, n: 0, ...hnErr } : hnErr ? { ok: false, partial: true, n: R.products.length + hnNeeds.length, ...hnErr, error: `${hnAll - hnN}/${hnAll} HN araması başarısız: ${hnErr.error}` } : { ok: true, n: R.products.length + hnNeeds.length });
     emit('hn');
@@ -1281,6 +1630,25 @@ const LabEngine = (() => {
   // ─── Çıktılar ─────────────────────────────────────────────────────────
   const dstr = (d) => { const t = ts(d); return t ? new Date(t).toISOString().slice(0, 10) : '?'; };
   const licTxt = (l) => (l?.kind === 'none' ? 'lisans yok' : l?.id || (l?.kind === 'other' ? 'özel lisans' : '?'));
+
+  function educationNotes(r, text = (s) => String(s || ''), link = (t, u) => t + ' — ' + u) {
+    if (!r.edu) return [];
+    const lines = ['## Eğitim notları', '', 'Hedef düzey: ' + text(r.edu.level || 'Henüz belirtilmedi; öğretmenle netleştir.'),
+      ...(r.edu.cats?.length ? ['Atlas başlıkları: ' + r.edu.cats.map((c) => text(c.title)).join(', ')] : []), '',
+      '- MEB müfredatı ve kazanım uyumu: hedef kazanımı seç; içerik ve değerlendirmeyi öğretmenle doğrula.',
+      '- Öğretmen iş yükü: hazırlık ve kontrol süresini azaltıyor mu? Önceki iş akışıyla karşılaştır.',
+      '- Pedagojik dayanak: aşağıdaki bulguların hedef yaşa ve ders bağlamına uygunluğunu değerlendir; öğrenme etkisini varsayma.'];
+    for (const e of r.edu.evidence || []) {
+      const url = safeUrl(e.url);
+      if (url) lines.push('  - ' + link(e.title, url) + (e.finding ? ': ' + text(e.finding) : ''));
+    }
+    if (!r.edu.evidence?.length) lines.push('  - Bu araştırmada pedagojik kanıt eklenmedi; pilot öncesi dayanak araştır.');
+    lines.push('- Çocuk verisi, KVKK ve veli onayı: kişisel veriyi en aza indir; veri saklama, silme ve erişim kurallarını belirle; veli onayı gereğini değerlendir.',
+      '- Sınıf içi pilot planı: 2 hafta, 1–2 öğretmen; öğretmen denetimi, küçük bir öğrenci grubu ve geri bildirim oturumlarıyla başla.',
+      '- Başarı ölçütü: kazanıma uygun ön/son değerlendirme, öğrencinin bağımsız performansı, öğretmenin kazandığı süre ve hatalı içerik oranı; eşikleri pilot öncesi belirle.', '');
+    return lines;
+  }
+
   function buildPrompt(r) {
     const L = [];
     L.push('Bir ürün fikrim var ve açık kaynakta neler olduğunu araştırdım. Yalnızca aşağıdaki kanıtlara dayan; emin olmadığın yerde bunu söyle.', '');
@@ -1308,6 +1676,7 @@ const LabEngine = (() => {
       L.push('', '## İnsanların istekleri (gerçek alıntılar)');
       r.needs.forEach((n) => L.push(`- “${n.text_tr || n.text}”${n.text_tr && n.text_tr !== n.text ? ` (orijinal: “${n.text}”)` : ''} — ${n.source}${n.where ? ` · ${n.where}` : ''}${n.votes ? ` · ${n.votes} oy` : ''} — ${n.url}`));
     }
+    if (r.edu) L.push('', ...educationNotes(r));
     L.push('', '## Senden istediklerim',
       '1. Fikri tek cümleyle netleştir: hedef kullanıcı kim, hangi işi çözüyor?',
       '2. Hangi repoyu ve kütüphaneleri temel almalıyım, neden? Lisans uyarılarını belirt.',
@@ -1342,11 +1711,12 @@ const LabEngine = (() => {
     if (r.products?.length) { L.push('## Benzer ürünler', ''); r.products.forEach((p) => L.push(`- ${link(p.title_tr || p.title, p.url)} — ${p.kind} · ▲ ${p.points} · ${dstr(p.date)}${p.hn && p.hn !== p.url && mdUrl(p.hn) ? ` · [tartışma](${mdUrl(p.hn)})` : ''}`)); L.push(''); }
     if (r.radar?.length) { L.push('## YZ Radar’dan', ''); r.radar.forEach((x) => L.push(`- ${md(x.title_tr)} (${md(x.source)})`)); L.push(''); }
     if (r.needs?.length) { L.push('## İnsanlar ne istiyor', ''); r.needs.forEach((n) => L.push(`> ${md(n.text_tr || n.text)}`, '>', `> — ${link(`${n.source}${n.where ? ' · ' + n.where : ''}`, n.url)}${n.votes ? ` · ${n.votes} oy` : ''} · ${dstr(n.date)}`, '')); }
+    if (r.edu) L.push(...educationNotes(r, md, link));
     const bad = (r.sources || []).filter((x) => !x.ok || x.partial);
     if (bad.length) L.push('## Notlar', '', ...bad.map((x) => `- ${x.id}: ${md(x.error || 'başarısız')}`), '');
     return L.join('\n');
   }
 
-  return { research, planQueries, rankRepos, licenseKind, extractNeeds, verdict, buildPrompt, toMarkdown, MODELS, _: { singular, stem, stripHtml, decode, safeUrl, trHits, enFromDict, parseLoose, validPlan, relevance, concepts, parseIdea, pickTopic, conceptHits, productsFrom, mdUrl } };
+  return { research, planQueries, eduMatch, rankRepos, licenseKind, normalizeLicense, extractNeeds, verdict, buildPrompt, toMarkdown, MODELS, _: { singular, stem, stripHtml, decode, safeUrl, trHits, enFromDict, parseLoose, validPlan, relevance, concepts, parseIdea, contentTerm, termNoise, pickTopic, conceptHits, productsFrom, mdUrl, educatorSearch, educatorRelevant, hasEduAnchor, education } };
 })();
 if (typeof module !== 'undefined') module.exports = LabEngine; else window.LabEngine = LabEngine;

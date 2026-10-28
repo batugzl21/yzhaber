@@ -1,0 +1,1710 @@
+{
+  "v": 1,
+  "updated": "2026-10-28",
+  "intro": "Eğitimde yapay zekâyı, önce çözmek istediğin öğrenme veya öğretmenlik ihtiyacından başlayarak keşfet. Bu atlasta araştırmalar, incelenebilir projeler, kullanılan ürünler ve Türkiye’de küçük bir sınıf pilotuna dönüşebilecek fikirler var. Deney bulguları, teknik kıyaslamalar ve politika rehberleri ayrı anlamlar taşır; her fikirde öğretmen kararı ve öğrencinin kendi çabası merkezde kalır.",
+  "categories": [
+    {
+      "id": "tutor",
+      "icon": "🧑‍🏫",
+      "title": "Kişisel YZ öğretmeni",
+      "short": "Hazır cevaptan önce soru ve ipucu vererek öğrencinin düşünmesini destekler.",
+      "why": "Öğrenci takıldığı adımda beklemeden yardım isteyebilir; öğretmen sık görülen kavram yanılgılarını görebilir. Yararlı bir yardımcı, doğru cevabı üretmek kadar öğrencinin yardım olmadan ne yapabildiğini de önemser.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Harvard fizik dersinde YZ öğretmeni deneyi — Kestin ve ark.",
+          "url": "https://doi.org/10.1038/s41598-025-97652-6",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "194 üniversite öğrencisinin katıldığı iki derslik çapraz deneyde, öğretim ilkeleriyle tasarlanan YZ öğretmeni daha yüksek son test kazanımı sağladı; sonuç tüm derslere genellenemez."
+        },
+        {
+          "title": "Koruyucu tasarım olmadan üretken YZ ve öğrenme — Bastani ve ark.",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12232635/",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Türkiye’de yaklaşık bin lise öğrencisiyle yapılan matematik deneyinde standart YZ erişimi kaldırıldığında başarı düştü; öğretmen ipuçlarıyla sınırlandırılan tasarım bu kaybı büyük ölçüde önledi."
+        },
+        {
+          "title": "Nijerya’da okul sonrası YZ destekli öğrenme — Dünya Bankası",
+          "url": "https://documents1.worldbank.org/curated/en/099548105192529324/pdf/IDU-c09f40d8-9ff8-42dc-b315-591157499be7.pdf",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Altı haftalık öğretmen rehberli GPT-4 programı, İngilizce, dijital beceri ve YZ bilgisini kapsayan son değerlendirmede 0,31 standart sapmalık kazanım sağladı; etki yalnızca sohbet aracına atfedilemez."
+        }
+      ],
+      "repos": [
+        {
+          "name": "HKUDS/DeepTutor",
+          "why": "Kaynak belgelerden kişisel öğrenme ve soru pratiği akışlarını incelemek için; modeli ve içerik sınırlarını ayrıca kurmak gerekir."
+        },
+        {
+          "name": "LEARNableLabs/opentutor",
+          "why": "Sokratik sorular ve önceki konulara dönüş için küçük başlangıç; API kullanıldığında veri cihaz dışına çıkabilir."
+        },
+        {
+          "name": "shayan-shojaei/open-tutor",
+          "why": "Yerelde çalışan ders, kart ve kısa sınav arayüzü; kendi YZ ipucu katmanını eklemek için sade ortam."
+        }
+      ],
+      "products": [
+        {
+          "name": "Khanmigo",
+          "url": "https://khanmigo.ai/pricing",
+          "what": "Yönlendirmeli öğrenme ve öğretmen araçları; öğretmen ve öğrenci erişim koşulları farklıdır.",
+          "price": "freemium"
+        },
+        {
+          "name": "Synthesis Tutor",
+          "url": "https://www.synthesis.com/tutor",
+          "what": "5–11 yaş matematiğine odaklanan uyarlanabilir öğretim ürünü; Türkçe ve müfredat uyumu ayrıca denenmeli.",
+          "price": "ücretli"
+        }
+      ],
+      "tr": "İlk pilotu tek sınıf düzeyi ve tek MEB öğrenme çıktısıyla sınırla; güncel programı öğretmen seçsin. EBA içeriğini otomatik çekmek yerine kullanım hakkı olan materyal yükle; iki haftada 1–2 öğretmenle yardımsız çıkış sorularını ve kontrol süresini izle.",
+      "risks": [
+        "Çocuk isimleri ve sohbetlerini gereksiz saklama; kurumun veri süreci ve gerekli veli bilgilendirmesi/onayı birlikte ele alınmalı.",
+        "İpucu yerine çözüm vermek bağımlılığı ve kopyayı artırabilir.",
+        "Yanlış açıklamalar için kaynak gösterme ve öğretmene bildirme yolu olmalı.",
+        "İnterneti olmayan öğrenciye aynı hedef için basılı seçenek sun."
+      ],
+      "ideas": [
+        {
+          "title": "Cevaptan önce bir soru",
+          "for": "7. sınıf fen öğrencileri",
+          "problem": "Öğrenci soruyu anlamadan çözümü kopyalıyor.",
+          "solution": "Önce gerekçe isteyen, sonra en fazla üç onaylı ipucu veren yardımcı.",
+          "mvp": [
+            "Tek kazanım için 15 örnek ve ipucu hazırla.",
+            "Öğrenci denemesinden sonra ipuçlarını sırayla aç.",
+            "Benzer soruyu YZ olmadan çözdür."
+          ],
+          "difficulty": 2,
+          "starter": "LEARNableLabs/opentutor",
+          "query": "Ortaokul fen öğrencileri için cevabı vermeden Sokratik sorular ve kademeli ipuçlarıyla kavram öğreten YZ öğretmeni"
+        },
+        {
+          "title": "Kaynağını gösteren ders arkadaşı",
+          "for": "Üniversiteye yeni başlayanlar",
+          "problem": "Ders notlarına ilişkin kaynaksız yanıtlar güven vermiyor.",
+          "solution": "Yalnızca izinli notlardan yanıtlayıp kaynak sayfasını açan yardımcı.",
+          "mvp": [
+            "Bir dersin izinli notlarını ekle.",
+            "Her yanıtta kaynak ve bilmiyorum seçeneği göster.",
+            "20 soruda kaynak doğruluğunu denetle."
+          ],
+          "difficulty": 2,
+          "starter": "HKUDS/DeepTutor",
+          "query": "Üniversite öğrencileri için yalnızca ders notlarına dayanan ve kaynak sayfasını gösteren kişisel YZ ders öğretmeni"
+        },
+        {
+          "title": "Etüt için ipucu dosyası",
+          "for": "Küçük etüt gruplarının öğretmenleri",
+          "problem": "Aynı temel sorular öğretmenin zamanını alıyor.",
+          "solution": "Takılınan adımları öğretmenin ipucu kartlarına bağlayan ders alanı.",
+          "mvp": [
+            "Bir konuyu üç derse böl.",
+            "Kontrol soruları ve öğretmen ipuçlarını ekle.",
+            "Yardım istenen adımları toplu raporla."
+          ],
+          "difficulty": 1,
+          "starter": "shayan-shojaei/open-tutor",
+          "query": "Etüt öğretmenleri için takılınan adımlarda onaylı ipucu kartları sunan yerel ders ve kısa sınav uygulaması"
+        }
+      ],
+      "keywords": [
+        "AI tutor",
+        "Socratic tutor",
+        "intelligent tutoring",
+        "personalized tutoring",
+        "Khanmigo"
+      ],
+      "tr_keywords": [
+        "kişisel öğretmen",
+        "yz öğretmen",
+        "sokratik",
+        "birebir öğren",
+        "etüt",
+        "özel ders"
+      ]
+    },
+    {
+      "id": "teacher-assistant",
+      "icon": "🗂️",
+      "title": "Öğretmen asistanı",
+      "short": "Ders planı, kazanıma uygun etkinlik ve farklı düzeylerde materyal için ilk taslağı hazırlar.",
+      "why": "Aynı içeriği farklı sınıflara uyarlamak zaman alır. Kaynağı ve sınıf bağlamı belirli taslaklar hazırlığı kolaylaştırabilir; pedagojik düzenlemeyi öğretmen yapar.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "ChatGPT ile ders hazırlama: EEF/NFER öğretmen deneyi",
+          "url": "https://www.nfer.ac.uk/publications/chatgpt-in-lesson-preparation-a-teacher-choices-trial/",
+          "year": 2024,
+          "kind": "RCT",
+          "finding": "68 okuldan 259 fen öğretmeniyle yürütülen deneyde, rehberle ChatGPT kullanan grup haftalık hazırlık süresinden ortalama 25,3 dakika kazandı; materyal kalitesinde fark saptanmadı."
+        },
+        {
+          "title": "Tutor CoPilot: öğretmene anlık YZ desteği — Wang ve ark. (ön baskı)",
+          "url": "https://arxiv.org/abs/2410.03017v1",
+          "year": 2024,
+          "kind": "RCT",
+          "finding": "900 etüt öğretmeni ve 1.800 öğrenciyi kapsayan çalışmada YZ desteği alan öğretmenlerin öğrencilerinde oturum sonunda konuya hâkimiyet olasılığı 4 yüzde puan arttı; bu yıl sonu sınav etkisi değildir."
+        },
+        {
+          "title": "UNESCO öğretmenler için YZ yetkinlik çerçevesi",
+          "url": "https://www.unesco.org/en/articles/ai-competency-framework-teachers",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "Çerçeve YZ pedagojisini ve etik yeterlikleri öğretmen gelişiminin parçası olarak tanımlar; ürünlerin öğrenme etkisini ölçen deney değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "microsoft/markitdown",
+          "why": "İzinli PDF, Word ve sunumları metne dönüştüren MIT lisanslı parça; tek başına plan üretmez."
+        },
+        {
+          "name": "langflow-ai/langflow",
+          "why": "Kazanım, kaynak ve çıktı şablonunu görsel akışta birleştirmek için; öğretmen onayını ekleyebilirsin."
+        },
+        {
+          "name": "langgenius/dify",
+          "why": "Kaynağa dayalı materyal ve rubrik taslaklarını iş akışına çevirmek için; ek koşullar içeren lisansını incele."
+        }
+      ],
+      "products": [
+        {
+          "name": "MagicSchool",
+          "url": "https://www.magicschool.ai/pricing",
+          "what": "Ders planı, farklılaştırma ve öğretmen işlerine yönelik YZ araçları.",
+          "price": "freemium"
+        },
+        {
+          "name": "Brisk Teaching",
+          "url": "https://www.briskteaching.com/plans",
+          "what": "Belge ve web araçlarında materyal uyarlama ve geri bildirim desteği.",
+          "price": "freemium"
+        },
+        {
+          "name": "Diffit",
+          "url": "https://web.diffit.me/faq",
+          "what": "Metinlerden farklı okuma düzeylerinde etkinlik ve materyal taslakları çıkarır.",
+          "price": "freemium"
+        }
+      ],
+      "tr": "MEB programının ders, sınıf ve uygulama yılıyla birlikte öğrenme çıktısını öğretmen seçsin; Maarif Modeli geçişini sınıflar arasında varsayma. EBA, e-Okul veya MEBBİS hesabı istemeden Word/PDF çıktısıyla başla; düzeltme dâhil toplam hazırlık süresini ölç.",
+      "risks": [
+        "Uydurulmuş kazanım kodları veya düzeye uymayan etkinlikler üretilebilir.",
+        "Öğrenci listeleri ve bireysel durum notları genel sohbet araçlarına gönderilmemeli.",
+        "Kitap ve görsellerin telifini gözet.",
+        "Uzun taslaklar kontrol yükünü artırabilir."
+      ],
+      "ideas": [
+        {
+          "title": "Kazanımdan 40 dakikalık plan",
+          "for": "Ortaokul branş öğretmenleri",
+          "problem": "Genel planlar sınıfın süresine uymuyor.",
+          "solution": "Seçilmiş çıktı ve materyalden düzenlenebilir etkinlik ve çıkış bileti taslağı.",
+          "mvp": [
+            "Bir dersin çıktılarını yıl ve kaynakla gir.",
+            "40 dakikalık şablon üret.",
+            "İki öğretmenle düzeltme süresini ölç."
+          ],
+          "difficulty": 2,
+          "starter": "langflow-ai/langflow",
+          "query": "Öğretmenler için MEB kazanımına ve ders süresine uygun düzenlenebilir ders planı ve çıkış bileti hazırlayan YZ asistanı"
+        },
+        {
+          "title": "Aynı metin, üç destek düzeyi",
+          "for": "İlkokul sınıf öğretmenleri",
+          "problem": "Tek çalışma kâğıdı her öğrenciye uymuyor.",
+          "solution": "Hedefi koruyup kelime desteği ve yönerge uzunluğunu değiştiren taslaklar.",
+          "mvp": [
+            "İzinli tek metni içe aktar.",
+            "Destekli, standart ve genişletilmiş sürüm üret.",
+            "Anlamın korunmasını öğretmene onaylat."
+          ],
+          "difficulty": 2,
+          "starter": "microsoft/markitdown",
+          "query": "İlkokul öğretmenleri için aynı hedefi koruyarak bir metni üç destek düzeyinde çalışma kâğıdına dönüştüren asistan"
+        },
+        {
+          "title": "Zümrenin materyal dolabı",
+          "for": "Okul zümreleri",
+          "problem": "Eski iyi etkinlikleri bulmak zor oluyor.",
+          "solution": "İzinli materyalleri kazanım ve süreye göre bulan kaynaklı öneri aracı.",
+          "mvp": [
+            "20 etkinliği etiketle.",
+            "Ders, süre ve araç gereç filtresi ekle.",
+            "Öneriye öğretmen değerlendirmesi ekle."
+          ],
+          "difficulty": 2,
+          "starter": "langgenius/dify",
+          "query": "Öğretmen zümreleri için kazanım süre ve sınıf düzeyine göre izinli ders materyallerini bulan kaynak gösteren asistan"
+        }
+      ],
+      "keywords": [
+        "teacher assistant",
+        "lesson planning",
+        "lesson plan",
+        "teacher workload",
+        "MagicSchool",
+        "Brisk Teaching",
+        "Diffit"
+      ],
+      "tr_keywords": [
+        "ders plan",
+        "kazanım",
+        "öğrenme çıktı",
+        "materyal hazır",
+        "öğretmen asistan",
+        "zümre",
+        "iş yük"
+      ]
+    },
+    {
+      "id": "assessment",
+      "icon": "📝",
+      "title": "Ölçme, rubrik ve geri bildirim",
+      "short": "Soru taslağı üretir, öğrenci yanıtını rubriğe göre incelemeye yardımcı olur.",
+      "why": "Açık uçlu yanıtlara zamanında geri bildirim vermek zordur. YZ ilk incelemeyi hızlandırabilir; gelişimi izleyen değerlendirme yüksek riskli not kararından ayrı tutulmalıdır.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Öğrenci yazılarına insan ve ChatGPT geri bildirimi — Steiss ve ark.",
+          "url": "https://doi.org/10.1016/j.learninstruc.2024.101894",
+          "year": 2024,
+          "kind": "vaka",
+          "finding": "Aynı yazılara verilen 200 insan ve 200 YZ geri bildirimi karşılaştırıldığında eğitimli değerlendiriciler beş boyutun dördünde daha kaliteli bulundu; çalışma öğrenme kazanımı veya not doğruluğu deneyi değildir."
+        },
+        {
+          "title": "OECD 2026 Dijital Eğitim Görünümü",
+          "url": "https://www.oecd.org/en/publications/oecd-digital-education-outlook-2026_062a7394-en.html",
+          "year": 2026,
+          "kind": "rapor",
+          "finding": "Kanıt sentezi pedagojik tasarım ve öğretmen desteğinin önemini vurgular; daha iyi ürün veya yanıt elde etmek tek başına öğrenme kazanımı sayılmaz."
+        }
+      ],
+      "repos": [
+        {
+          "name": "PrairieLearn/PrairieLearn",
+          "why": "Parametreli soru ve otomatik kontrol altyapısı; onaylı taslakları çalıştırılabilir sorulara dönüştürmek için."
+        },
+        {
+          "name": "moodle/moodle",
+          "why": "Soru bankası, rubrik ve sınav akışları olan temel; mevcut değerlendirmeye YZ taslak katmanı eklemek için."
+        },
+        {
+          "name": "langgenius/dify",
+          "why": "Açık uçlu yanıtı rubrik ve metinden kanıtla inceleyen akış kurmak için; puan kararını öğretmene bırak."
+        }
+      ],
+      "products": [
+        {
+          "name": "Gradescope",
+          "url": "https://turnitin.gradescope.com/pricing",
+          "what": "Rubrikle değerlendirme ve yanıt gruplama; YZ destekli özellikler kurumsal plana bağlıdır.",
+          "price": "freemium"
+        },
+        {
+          "name": "Formative",
+          "url": "https://www.formative.com/",
+          "what": "Sınıf yanıtlarını izleme, kısa değerlendirme ve geri bildirim akışları.",
+          "price": "freemium"
+        }
+      ],
+      "tr": "Rubriği MEB öğrenme çıktılarından başlayarak öğretmen hazırlasın; soru ve cevap anahtarı ikinci kontrol görsün. Türkçe açık uçlu yanıtlarda farklı anlatımlarla dene; ilk pilotta resmî not yerine geri bildirim kullan ve öğrenci itirazını görünür kıl.",
+      "risks": [
+        "Aynı doğru fikir farklı Türkçeyle anlatıldığında haksız puanlanabilir.",
+        "Belirsiz soru kökü, hatalı anahtar veya birden fazla doğru seçenek üretilebilir.",
+        "Sınav kâğıtları kişisel bilgi içerebilir.",
+        "YZ puanı incelemesiz karne veya seçme kararına dönüşmemeli."
+      ],
+      "ideas": [
+        {
+          "title": "Gerekçeli rubrik taslağı",
+          "for": "Lise edebiyat öğretmenleri",
+          "problem": "Kompozisyonda neyin düzeltileceğini açıklamak zaman alıyor.",
+          "solution": "Rubrik maddesini metindeki kanıtla eşleştiren öğretmen onaylı taslak.",
+          "mvp": [
+            "Dört ölçütlü rubrik gir.",
+            "Kimliksiz örneklerde tek düzeltme önerisi üret.",
+            "Öğretmen düzenlemesi ve yeniden yazımı karşılaştır."
+          ],
+          "difficulty": 2,
+          "starter": "langgenius/dify",
+          "query": "Lise kompozisyonlarına rubrik ve metinden kanıt göstererek öğretmen onaylı Türkçe geri bildirim hazırlayan asistan"
+        },
+        {
+          "title": "Öğretmen onaylı soru atölyesi",
+          "for": "Ortaokul fen öğretmenleri",
+          "problem": "Çeldirici ve açıklama hazırlamak uzun sürüyor.",
+          "solution": "Onaylı taslakları denetlenen cevap anahtarıyla soru bankasına alan araç.",
+          "mvp": [
+            "Tek kazanım için beş taslak üret.",
+            "Anahtar ve çeldiricileri öğretmene denetlet.",
+            "Moodle’a aktarılabilir çıktı hazırla."
+          ],
+          "difficulty": 2,
+          "starter": "moodle/moodle",
+          "query": "Fen kazanımlarına uygun çoktan seçmeli sorular ve çeldirici açıklamaları üreten öğretmen onaylı soru bankası"
+        },
+        {
+          "title": "Aynı hedef, farklı sayılar",
+          "for": "Lise matematik öğretmenleri",
+          "problem": "Tek soru kalıbının cevabı kolayca paylaşılıyor.",
+          "solution": "Parametreleri değişen ve sonucu bağımsız kuralla denetlenen alıştırmalar.",
+          "mvp": [
+            "Bir denklem türü ve sayı aralığı seç.",
+            "Örnekleri kurallı çözücüyle kontrol et.",
+            "Yanıta göre onaylı hata ipucunu göster."
+          ],
+          "difficulty": 2,
+          "starter": "PrairieLearn/PrairieLearn",
+          "query": "Lise matematik öğretmenleri için parametreli soru üreten ve yanıtları kurallarla denetleyip biçimlendirici geri bildirim veren sistem"
+        }
+      ],
+      "keywords": [
+        "formative assessment",
+        "automated grading",
+        "rubric",
+        "AI feedback",
+        "question generation",
+        "Gradescope"
+      ],
+      "tr_keywords": [
+        "ölçme",
+        "değerlendirme",
+        "rubrik",
+        "puanlama",
+        "geri bildirim",
+        "soru üret",
+        "soru banka",
+        "kompozisyon"
+      ]
+    },
+    {
+      "id": "spaced-repetition",
+      "icon": "🧠",
+      "title": "Aralıklı tekrar ve hatırlama",
+      "short": "Unutulmaya başlayan bilgiyi kısa hatırlama alıştırmalarıyla yeniden karşısına çıkarır.",
+      "why": "Kart sayısı kadar doğru zamanda hatırlamaya çalışmak önemlidir. FSRS tekrar zamanını geçmiş yanıtlara göre ayarlayabilir; YZ öğretmenin denetleyeceği kart taslakları hazırlayabilir.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Sınıfta hatırlama pratiği: 50 deneyin sistematik derlemesi — Agarwal ve ark.",
+          "url": "https://doi.org/10.1007/s10648-021-09595-9",
+          "year": 2021,
+          "kind": "rapor",
+          "finding": "50 sınıf deneyinin derlemesi farklı ders ve yaşlarda hatırlama pratiğinin yararını buldu; bu kanıt YZ kartlarının veya belirli bir uygulamanın üstünlüğünü göstermez."
+        },
+        {
+          "title": "FSRS ve diğer tekrar algoritmaları: açık teknik kıyaslama",
+          "url": "https://github.com/open-spaced-repetition/srs-benchmark",
+          "year": 2026,
+          "kind": "vaka",
+          "finding": "Güncellenen açık kıyaslama, tekrar kayıtlarından hatırlama olasılığı tahminlerini karşılaştırır; tahmin hatasının azalması tek başına sınıfta daha fazla öğrenme kanıtı değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "ankitects/anki",
+          "why": "Kart, medya ve tekrar arayüzü için olgun temel; GPL koşullarını dağıtım biçimine göre incele."
+        },
+        {
+          "name": "open-spaced-repetition/ts-fsrs",
+          "why": "TypeScript uygulamasına hatırlama olasılığına dayalı takvim ekleyen odaklı kütüphane."
+        },
+        {
+          "name": "open-spaced-repetition/fsrs4anki",
+          "why": "FSRS optimizasyonunu ve açıklamalarını incelemek için; güncel Anki yerleşik FSRS içerir."
+        }
+      ],
+      "products": [
+        {
+          "name": "Anki",
+          "url": "https://apps.ankiweb.net/",
+          "what": "Masaüstü ve Android ücretsiz, resmî iOS sürümü ücretli tekrar kartı ekosistemi.",
+          "price": "freemium"
+        },
+        {
+          "name": "Quizlet",
+          "url": "https://quizlet.com/upgrade",
+          "what": "Kartlar ve çalışma modları; bazı alıştırma ve sınav özellikleri ücretli plana bağlıdır.",
+          "price": "freemium"
+        }
+      ],
+      "tr": "LGS/YKS/KPSS bilgisini ezberletmenin yanında kavram açıklama ve yeni örneğe uygulama kartları kullan. Türkçe eklerde birden çok kabul edilebilir yanıt tanımla; çevrim dışı çalışmayı ve öğretmenin düzeltebildiği desteleri önceliklendir.",
+      "risks": [
+        "Yanlış kart düzenli tekrarla pekişebilir.",
+        "Kart başarısı yeni problem çözme becerisiyle aynı değildir.",
+        "Aşırı günlük hedef kaygı yaratabilir.",
+        "Tekrar geçmişinin gizliliğini ve kartların telifini gözet."
+      ],
+      "ideas": [
+        {
+          "title": "Günde on dakikalık kavram turu",
+          "for": "LGS öğrencileri",
+          "problem": "Çalışılan konu birkaç hafta sonra unutuluyor.",
+          "solution": "Onaylı kavram kartlarını FSRS ile sıraya koyan çevrim dışı araç.",
+          "mvp": [
+            "Bir ünitede 30 kart hazırla.",
+            "Hatırlama yanıtlarıyla takvim kur.",
+            "Yeni örnekle kısa kontrol yap."
+          ],
+          "difficulty": 1,
+          "starter": "open-spaced-repetition/ts-fsrs",
+          "query": "LGS öğrencileri için öğretmen onaylı kavram kartlarını FSRS aralıklı tekrar takvimine göre sunan çevrim dışı uygulama"
+        },
+        {
+          "title": "Notlardan denetlenebilir kartlar",
+          "for": "Üniversite öğrencileri",
+          "problem": "Kart hazırlamak uzun sürüyor ve kaynak kayboluyor.",
+          "solution": "Her taslağa kaynak sayfası ve onay durumu ekleyen Anki yardımcısı.",
+          "mvp": [
+            "İzinli bir nottan 20 taslak çıkar.",
+            "Kaynak ve düzenleme alanı göster.",
+            "Onaylı kartları Anki’ye aktar."
+          ],
+          "difficulty": 2,
+          "starter": "ankitects/anki",
+          "query": "Üniversite ders notlarından kaynak sayfası gösteren ve onaydan sonra Anki kartlarına aktaran YZ aracı"
+        },
+        {
+          "title": "Kelimeyi yeni cümlede hatırla",
+          "for": "Yetişkin İngilizce öğrenenler",
+          "problem": "Kartın cümlesi ezberleniyor ama kelime kullanılamıyor.",
+          "solution": "Aynı kelimeyi farklı onaylı örneklerde sorduran tekrar akışı.",
+          "mvp": [
+            "20 kelimeye üç bağlam ekle.",
+            "Aynı cümleyi arka arkaya gösterme.",
+            "Yeni cümlede kullanımı ayrı izle."
+          ],
+          "difficulty": 2,
+          "starter": "open-spaced-repetition/ts-fsrs",
+          "query": "İngilizce kelimeleri farklı cümlelerde hatırlatan ve FSRS ile tekrar zamanını ayarlayan dil uygulaması"
+        }
+      ],
+      "keywords": [
+        "spaced repetition",
+        "retrieval practice",
+        "flashcard",
+        "FSRS",
+        "Anki",
+        "Quizlet"
+      ],
+      "tr_keywords": [
+        "aralıklı tekrar",
+        "hatırlama",
+        "hafıza kart",
+        "bilgi kart",
+        "unutma",
+        "kelime tekrar"
+      ]
+    },
+    {
+      "id": "exam-prep",
+      "icon": "🎯",
+      "title": "Sınav hazırlığı ve yanlış analizi",
+      "short": "Deneme sonuçlarını konu ve hata türüne çevirip yapılabilir tekrar planı önerir.",
+      "why": "Öğrenci kaç yanlış yaptığını biliyor, neden yaptığını bilmiyor olabilir. Küçük bir araç bilgi eksiği, yöntem ve zaman yönetimini ayırarak öğretmen görüşmesini somutlaştırabilir.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Koruyucu tasarım olmadan üretken YZ ve öğrenme — Bastani ve ark.",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12232635/",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Türkiye’deki lise matematik deneyinde doğrudan yanıt veren YZ ile alıştırma başarısının yükselmesi yardım kaldırılınca korunmadı; sınav hazırlığında yardımsız ölçüm gereklidir."
+        },
+        {
+          "title": "Sınıfta hatırlama pratiği: 50 deneyin sistematik derlemesi — Agarwal ve ark.",
+          "url": "https://doi.org/10.1007/s10648-021-09595-9",
+          "year": 2021,
+          "kind": "rapor",
+          "finding": "Sınıf deneylerinin derlemesi geri çağırma pratiğinin yararını gösterir; bu sonuç LGS/YKS net artışı garantisi değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "zijinz456/OpenTutor",
+          "why": "Yanlış takibi, kısa sınav ve öğrenme planı için; Türkiye sınav konularını ve denetimi sen eklersin."
+        },
+        {
+          "name": "open-spaced-repetition/ts-fsrs",
+          "why": "Yanlış konuların tekrar tarihini belirlemek için; soru bankası veya sınav tahmini içermez."
+        },
+        {
+          "name": "ankitects/anki",
+          "why": "Kendi yanlışlarından açıklamalı kartlar oluşturmak için; görsellerin paylaşım hakkını gözet."
+        },
+        {
+          "name": "turer73/bilge-arena",
+          "why": "Türkçe YKS oyunlaştırma örneği; görünen dosyalarda açık lisans bulunmadığından izin doğrulanmadan kodunu veya sorularını kopyalama."
+        }
+      ],
+      "products": [
+        {
+          "name": "Kunduz",
+          "url": "https://kunduz.com/tr/",
+          "what": "LGS/YKS hazırlığında soru çözümü, koçluk ve YZ asistanını paketlere göre birleştirir.",
+          "price": "ücretli"
+        },
+        {
+          "name": "Raunt",
+          "url": "https://www.raunt.com/",
+          "what": "YKS konu çalışması, denemeler ve kişiselleştirilmiş çalışma programı.",
+          "price": "ücretli"
+        }
+      ],
+      "tr": "LGS, TYT, AYT ve KPSS konu etiketlerini ayrı tut; kapsamı resmî kaynaklardan öğretmen güncellesin. e-Okul veya yayınevi hesabı istemeden elle girilen sayılarla başla; MEB/ÖSYM sorularını açık lisanslı varsayma ve telifli kâğıtları izinsiz toplama.",
+      "risks": [
+        "Puan ve sıralama garantisi yanıltır.",
+        "Yanlışı otomatik olarak dikkatsizlik veya yetersizlik diye etiketlemek zarar verebilir.",
+        "Aşırı çalışma yükü ve bildirimler eklenebilir.",
+        "Deneme kâğıtları kimlik ve telifli içerik taşıyabilir."
+      ],
+      "ideas": [
+        {
+          "title": "Yanlışımın nedeni neydi?",
+          "for": "LGS öğrencileri ve rehber öğretmenler",
+          "problem": "Aynı konunun yanlışları farklı nedenlerden kaynaklanıyor.",
+          "solution": "Öğrencinin seçtiği hata nedenini konuya bağlayıp üç küçük hedef çıkaran araç.",
+          "mvp": [
+            "Konu, süre ve açıklamayla kayıt aç.",
+            "Hata nedenini öğrenciye seçtir.",
+            "Bir hafta sonra benzer soruyla kontrol et."
+          ],
+          "difficulty": 2,
+          "starter": "zijinz456/OpenTutor",
+          "query": "LGS deneme yanlışlarını konu ve hata nedenine göre analiz ederek öğretmenle paylaşılabilir tekrar hedefleri üreten uygulama"
+        },
+        {
+          "title": "Yanlıştan tekrar randevusu",
+          "for": "TYT/AYT öğrencileri",
+          "problem": "Çözülen yanlışlara dönülmüyor.",
+          "solution": "Çıkarılan dersi kartlaştırıp uygun tarihte tekrar soran yanlış defteri.",
+          "mvp": [
+            "Kısa ders ve özgün örnek kaydet.",
+            "FSRS ile tarih hesapla.",
+            "Yeni soru çözümünü ayrıca izle."
+          ],
+          "difficulty": 1,
+          "starter": "open-spaced-repetition/ts-fsrs",
+          "query": "YKS öğrencilerinin yanlış sorulardan çıkardığı kavram derslerini aralıklı tekrar takvimine dönüştüren yanlış defteri"
+        },
+        {
+          "title": "KPSS için açıklamalı mini deste",
+          "for": "Çalışan KPSS adayları",
+          "problem": "Kısa aralarda hangi konuya dönüleceği belirsiz.",
+          "solution": "Kendi notlarını tarihli kaynaklarla kartlaştıran araç.",
+          "mvp": [
+            "Tek konu için 25 özgün kart hazırla.",
+            "Kaynak tarihi ve değişiklik bildirimi ekle.",
+            "Haftalık süreyi aday belirlesin."
+          ],
+          "difficulty": 1,
+          "starter": "ankitects/anki",
+          "query": "Çalışan KPSS adayları için tarihli kaynak notlarıyla açıklamalı tekrar kartları ve kısa çalışma oturumları hazırlayan araç"
+        }
+      ],
+      "keywords": [
+        "exam preparation",
+        "test prep",
+        "mock exam",
+        "practice test",
+        "exam anxiety",
+        "mistake analysis"
+      ],
+      "tr_keywords": [
+        "lgs",
+        "yks",
+        "tyt",
+        "ayt",
+        "kpss",
+        "deneme sınav",
+        "sınav hazırl",
+        "yanlış analiz",
+        "yanlış defter"
+      ]
+    },
+    {
+      "id": "literacy-language",
+      "icon": "🗣️",
+      "title": "Okuma, yazma ve dil öğrenimi",
+      "short": "Sesli okuma, yazı taslağı ve konuşma pratiğine anlaşılır geri bildirim ekler.",
+      "why": "Sınıfta herkesin konuşup yazma denemesi yapabildiği süre sınırlıdır. Araçlar ek pratik alanı açabilir; okuduğunu anlama ve kendini anlatma hedefleri korunmalıdır.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Sohbet botlarıyla dil öğrenimi meta-analizi — Wang ve ark.",
+          "url": "https://doi.org/10.3102/00346543241255621",
+          "year": 2024,
+          "kind": "meta-analiz",
+          "finding": "2024’te çevrim içi yayımlanan 28 çalışmalık meta-analiz dil öğreniminde ortalama olumlu etki buldu (g=0,484); araçlar ve düzeyler farklıdır, sonuç yalnızca üretken YZ’ye ait değildir."
+        },
+        {
+          "title": "Nijerya’da okul sonrası YZ destekli öğrenme — Dünya Bankası",
+          "url": "https://documents1.worldbank.org/curated/en/099548105192529324/pdf/IDU-c09f40d8-9ff8-42dc-b315-591157499be7.pdf",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Nijerya’daki öğretmen rehberli programda İngilizce bölümünde 0,24 standart sapmalık kazanım bulundu; sonuç Türkçe okuma akıcılığına doğrudan taşınamaz."
+        },
+        {
+          "title": "Öğrenci yazılarına insan ve ChatGPT geri bildirimi — Steiss ve ark.",
+          "url": "https://doi.org/10.1016/j.learninstruc.2024.101894",
+          "year": 2024,
+          "kind": "vaka",
+          "finding": "Yazı geri bildirimi karşılaştırmasında insan değerlendiriciler çoğu boyutta üstündü; YZ taslağı yazıyı öğrenci yerine yeniden yazmadan kullanılmalı."
+        }
+      ],
+      "repos": [
+        {
+          "name": "SYSTRAN/faster-whisper",
+          "why": "Konuşmayı metne çevirip öğrencinin kendi denemesini incelemesi için; çocuk sesi veya telaffuz puanı doğruluğunu garanti etmez."
+        },
+        {
+          "name": "languagetool-org/languagetool",
+          "why": "İngilizce gibi desteklenen dillerde yazım ve dil bilgisi ipuçları; Türkçe desteğini varsayma."
+        },
+        {
+          "name": "LibreTranslate/LibreTranslate",
+          "why": "Kurumda barındırılan çeviri ve karşılaştırmalı dil etkinlikleri; dil çiftlerini ve kaliteyi doğrula."
+        }
+      ],
+      "products": [
+        {
+          "name": "Duolingo",
+          "url": "https://www.duolingo.com/",
+          "what": "Dil alıştırmaları; üretken YZ özellikleri dil ve plana göre değişir.",
+          "price": "freemium"
+        },
+        {
+          "name": "ELSA Speak",
+          "url": "https://elsaspeak.com/",
+          "what": "İngilizce konuşma ve telaffuz pratiğine otomatik geri bildirim.",
+          "price": "freemium"
+        },
+        {
+          "name": "Google Read Along",
+          "url": "https://readalong.google/",
+          "what": "Desteklenen dillerde sesli okumaya anlık yardım; Türkçe erişimini ayrıca kontrol et.",
+          "price": "ücretsiz"
+        }
+      ],
+      "tr": "Türkçe okuma-yazma ile yabancı dili aynı ölçekle puanlama; sınıf, ana dil ve hedef dil düzeyini ayrı seç. Çocuk sesinin tanınma hatalarını öğretmen örneklemesiyle incele; İngilizceyi MEB programına veya yetişkinlerde CEFR hedefine bağla.",
+      "risks": [
+        "Ses kayıtları özel bilgi içerebilir; kısa saklama ve silme seçeneği gerekir.",
+        "Aksan veya konuşma farklılığı hata sayılabilir.",
+        "Düzeltme öğrencinin fikrini ve sesini silebilir.",
+        "Ses tanıma çıktısı okuma güçlüğü tanısı değildir."
+      ],
+      "ideas": [
+        {
+          "title": "Öğretmenle sesli okuma günlüğü",
+          "for": "İlkokul öğretmenleri",
+          "problem": "Okuma örneklerini haftalar arasında karşılaştırmak zor.",
+          "solution": "Kaydı metinle yan yana gösterip düzeltmeyi öğretmene bırakan yerel günlük.",
+          "mvp": [
+            "Önce yetişkin sesleriyle hataları ölç.",
+            "İzinli kısa kayıt ve öğretmen notu ekle.",
+            "Silme ve toplu ilerleme seçeneği koy."
+          ],
+          "difficulty": 3,
+          "starter": "SYSTRAN/faster-whisper",
+          "query": "İlkokul öğretmenleri için sesi yerelde işleyen ve okuma metnini öğretmen kontrolüyle karşılaştıran sesli okuma günlüğü"
+        },
+        {
+          "title": "Bir dakikalık İngilizce konuşma",
+          "for": "Lise öğrencileri ve yetişkinler",
+          "problem": "Uzun geri bildirim listeleri pratiği zorlaştırıyor.",
+          "solution": "Konuşmayı yazıya çevirip tek iletişim hedefiyle yeniden deneme isteyen yardımcı.",
+          "mvp": [
+            "Beş gündelik görev hazırla.",
+            "Tanıma metnini öğrenciye doğrulat.",
+            "Tek öneriden sonraki kaydı karşılaştır."
+          ],
+          "difficulty": 2,
+          "starter": "SYSTRAN/faster-whisper",
+          "query": "İngilizce öğrenenler için konuşmayı metne çeviren ve tek hedefle yeniden konuşma pratiği yaptıran yardımcı"
+        },
+        {
+          "title": "Yazımı ben düzeltiyorum",
+          "for": "İngilizce yazma öğrencileri",
+          "problem": "Araç metni düzeltiyor ama öğrenci nedenini öğrenemiyor.",
+          "solution": "Sorunlu kısmı işaretleyip öğrenciden düzeltme ve gerekçe isteyen araç.",
+          "mvp": [
+            "On örnekte kural önerilerini dene.",
+            "Öğrencinin düzeltmesini iste.",
+            "Sonraki taslakta aynı hata türünü incele."
+          ],
+          "difficulty": 2,
+          "starter": "languagetool-org/languagetool",
+          "query": "İngilizce yazma öğrencileri için metni yeniden yazmadan ipucu veren ve gerekçeli düzeltme isteyen yazma asistanı"
+        }
+      ],
+      "keywords": [
+        "language learning",
+        "literacy",
+        "reading fluency",
+        "pronunciation",
+        "speaking practice",
+        "writing feedback",
+        "Duolingo",
+        "ELSA"
+      ],
+      "tr_keywords": [
+        "okuma yazma",
+        "okuma akıcı",
+        "sesli okuma",
+        "yazma beceri",
+        "dil öğren",
+        "ingilizce",
+        "telaffuz",
+        "konuşma prati"
+      ]
+    },
+    {
+      "id": "math-stem",
+      "icon": "🔬",
+      "title": "Matematik ve STEM keşfi",
+      "short": "Çözüm adımları, formüller ve simülasyonları öğrencinin açıklamasıyla birleştirir.",
+      "why": "Doğru sonuç öğrencinin nedenini anladığını göstermez. Sembolik denetim ve görsel modeller öğretmenin akıl yürütmeyi görmesini kolaylaştırabilir.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Harvard fizik dersinde YZ öğretmeni deneyi — Kestin ve ark.",
+          "url": "https://doi.org/10.1038/s41598-025-97652-6",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Harvard’ın iki fizik dersindeki kısa vadeli kazanım, doğrulanmış içerik ve pedagojik yönlendirme içeren tasarımla elde edildi."
+        },
+        {
+          "title": "Koruyucu tasarım olmadan üretken YZ ve öğrenme — Bastani ve ark.",
+          "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC12232635/",
+          "year": 2025,
+          "kind": "RCT",
+          "finding": "Lise matematik deneyinde yanıt odaklı YZ yardımıyla alıştırma başarısı ve yardımsız öğrenme ayrıştı; öğrencinin kendi gerekçesi de ölçülmeli."
+        }
+      ],
+      "repos": [
+        {
+          "name": "sympy/sympy",
+          "why": "Denklem ve eşdeğerlikleri kurallı denetlemek; YZ açıklamasına bağımsız kontrol eklemek için."
+        },
+        {
+          "name": "jsxgraph/jsxgraph",
+          "why": "Tarayıcıda etkileşimli grafik ve geometri; tahmin-et-dene-açıkla etkinlikleri için."
+        },
+        {
+          "name": "lukas-blecher/LaTeX-OCR",
+          "why": "Basılı denklem görselini LaTeX’e dönüştürür; el yazısı doğruluğunu varsayma ve sonucu kullanıcıya doğrulat."
+        }
+      ],
+      "products": [
+        {
+          "name": "Photomath",
+          "url": "https://www.photomath.net/",
+          "what": "Kamerayla alınan matematik ifadesinde çözüm adımlarını gösterir; bazı açıklamalar ücretlidir.",
+          "price": "freemium"
+        },
+        {
+          "name": "GeoGebra",
+          "url": "https://www.geogebra.org/",
+          "what": "Grafik, cebir ve geometri keşfi; eğitimde ticari olmayan kullanım ücretsizdir.",
+          "price": "ücretsiz"
+        },
+        {
+          "name": "Mathpix Snip",
+          "url": "https://mathpix.com/pricing/all",
+          "what": "Basılı ve el yazısı matematik dâhil belgeleri sayısallaştırır; Snip ve API koşulları farklıdır.",
+          "price": "freemium"
+        }
+      ],
+      "tr": "LGS/YKS örneklerinde sonuç eşleştirmenin yanında öğrenciden adım açıklaması iste. Türkçe ondalık virgül ve birimleri dene; el yazısı alımını ilk sürümde onaylı metin girişinden ayrı tut.",
+      "risks": [
+        "OCR üs, işaret veya kesri yanlış okuyabilir.",
+        "Doğru sonuca giden hatalı gerekçe ikna edici gelebilir.",
+        "Öğrenci denemeden verilen çözüm kopyayı kolaylaştırır.",
+        "Ekran okuyucu için formüllerin metin karşılığı gerekir."
+      ],
+      "ideas": [
+        {
+          "title": "Denklemde hangi adım bozuldu?",
+          "for": "Lise cebir öğrencileri",
+          "problem": "Hatanın hangi adımda başladığı bulunamıyor.",
+          "solution": "Dönüşümleri sembolik denetleyip ilk tutarsız adımda ipucu veren araç.",
+          "mvp": [
+            "Birinci dereceden denklemlerle başla.",
+            "Dönüşümleri SymPy ile denetle.",
+            "Doğru adım yerine gerekçe sorusu göster."
+          ],
+          "difficulty": 2,
+          "starter": "sympy/sympy",
+          "query": "Lise öğrencilerinin denklem çözüm adımlarını sembolik denetimle kontrol eden ve ilk hataya ipucu veren matematik uygulaması"
+        },
+        {
+          "title": "Önce tahmin et, sonra sürükle",
+          "for": "Ortaokul fen ve matematik sınıfları",
+          "problem": "Değişkenler arası ilişki ezberleniyor.",
+          "solution": "Önce tahmin alıp sonra sürgülü grafikle karşılaştıran etkinlik.",
+          "mvp": [
+            "Tek doğrusal ilişki kur.",
+            "Grafikten önce tahmin iste.",
+            "Yeni örneği çizimsiz sor."
+          ],
+          "difficulty": 2,
+          "starter": "jsxgraph/jsxgraph",
+          "query": "Ortaokul öğrencileri için tahminden sonra etkileşimli grafik ve simülasyonla değişken ilişkilerini keşfettiren STEM aracı"
+        },
+        {
+          "title": "Denklem fotoğrafını doğrula",
+          "for": "Üniversite ve STEM öğrencileri",
+          "problem": "Basılı denklemi notlara aktarmak zor.",
+          "solution": "Formül görselini düzenlenebilir LaTeX taslağına çeviren araç.",
+          "mvp": [
+            "30 basılı denklemle başla.",
+            "Sonucu aslıyla yan yana göster.",
+            "Onaylı formülü kaynakla dışa aktar."
+          ],
+          "difficulty": 2,
+          "starter": "lukas-blecher/LaTeX-OCR",
+          "query": "Basılı matematik formüllerini fotoğraftan LaTeX taslağına çeviren ve onayla erişilebilir ders notuna aktaran araç"
+        }
+      ],
+      "keywords": [
+        "math tutor",
+        "STEM education",
+        "math education",
+        "science education",
+        "formula recognition",
+        "Photomath",
+        "GeoGebra",
+        "Mathpix"
+      ],
+      "tr_keywords": [
+        "matematik",
+        "fen",
+        "denklem",
+        "geometri",
+        "formül",
+        "simülasyon",
+        "adım adım çöz"
+      ]
+    },
+    {
+      "id": "coding-education",
+      "icon": "💻",
+      "title": "Kodlama eğitimi ve otomatik değerlendirme",
+      "short": "Öğrenci kodunu test eder, çözümü açıklamadan hata üzerinde düşünmesine yardım eder.",
+      "why": "Başlangıç düzeyindeki öğrenci küçük bir hatada uzun süre takılabilir. Testler ve kademeli ipuçları hızlı geri bildirim sağlar; öğrencinin kodu okuyabilmesi ve kendi açıklamasını yapması temel hedef olarak kalır.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "CodeAid’in programlama dersindeki 12 haftalık uygulaması",
+          "url": "https://doi.org/10.1145/3613904.3642773",
+          "year": 2024,
+          "kind": "vaka",
+          "finding": "Yaklaşık 700 öğrencilik dersteki kullanım analizi, çözüm kodu vermeden kavram açıklaması ve hata ipucu sunmayı inceledi; nedensel öğrenme kazanımı ölçen RCT değildir."
+        },
+        {
+          "title": "UNESCO öğretmenler için YZ yetkinlik çerçevesi",
+          "url": "https://www.unesco.org/en/articles/ai-competency-framework-teachers",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "Öğretmen yetkinlik çerçevesi YZ pedagojisini ve insan sorumluluğunu vurgular; kodlama yardımcısını ders hedefine göre tasarlamak için rehberdir, belirli bir kod aracının başarı kanıtı değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "jupyter/nbgrader",
+          "why": "Jupyter ödevlerini dağıtma, toplama, test etme ve elle değerlendirme için; açıklayıcı YZ ipuçlarını bu akışın üzerine ekleyebilirsin."
+        },
+        {
+          "name": "ucbds-infra/otter-grader",
+          "why": "Python ve R ödevlerinde açık/gizli testler ve yerel değerlendirme için; öğrencinin kodunu kontrollü ortamda çalıştırmak gerekir."
+        },
+        {
+          "name": "PrairieLearn/PrairieLearn",
+          "why": "Rastgeleleştirilmiş sorular ve kod değerlendirme altyapısı; yalnızca sonuca değil gerekçe ve test tasarımına da puan vermek için."
+        }
+      ],
+      "products": [
+        {
+          "name": "Code.org / CodeAI",
+          "url": "https://code.org/",
+          "what": "Öğrenci ve öğretmenler için ücretsiz bilgisayar bilimi, programlama ve YZ dersleri sunar.",
+          "price": "ücretsiz"
+        },
+        {
+          "name": "Exercism",
+          "url": "https://exercism.org/",
+          "what": "Programlama alıştırmaları, otomatik kontroller ve mentorluk içeren ücretsiz öğrenme ortamıdır.",
+          "price": "ücretsiz"
+        }
+      ],
+      "tr": "Ortaokulda bilişim teknolojileri, lisede bilgisayar bilimi, üniversitede giriş programlama hedeflerini ayrı ele al. Türkçe hata açıklamalarıyla tek dil ve tek üniteyle başla; öğretmenin yazdığı testlere göre ipucu ver, EBA veya okul hesabıyla bütünleşmeyi ilk sürüme koyma.",
+      "risks": [
+        "Hazır çözüm kodu öğrencinin deneme ve hata ayıklama becerisini zayıflatabilir.",
+        "Öğrenci kodu güvenilmeyen girdidir; kaynak ve süre sınırlarıyla ayrı ortamda çalıştırılmalı.",
+        "YZ ipucu gizli testleri veya çözümü sızdırabilir.",
+        "Otomatik testlerin geçmesi kodun anlaşıldığını veya özgün olduğunu tek başına göstermez."
+      ],
+      "ideas": [
+        {
+          "title": "Hata mesajını birlikte okuyalım",
+          "for": "Lisede Python öğrenen öğrenciler",
+          "problem": "İngilizce hata mesajı öğrenciyi çözümü kopyalamaya itiyor.",
+          "solution": "Hata mesajını sade Türkçeye çevirip öğrenciden ilk tahminini isteyen yardımcı.",
+          "mvp": [
+            "Bir ünitedeki beş hata türüyle başla.",
+            "Yanlış ve doğru örnekleri test et.",
+            "İpucu sonrası öğrenciden değişikliği açıklamasını iste."
+          ],
+          "difficulty": 2,
+          "starter": "jupyter/nbgrader",
+          "query": "Python öğrenen lise öğrencileri için hata mesajını Türkçe açıklayan ve çözüm kodu yerine kademeli hata ayıklama ipucu veren asistan"
+        },
+        {
+          "title": "Testimi kendim yazıyorum",
+          "for": "Üniversite giriş programlama öğrencileri",
+          "problem": "Öğrenciler yalnızca verilen örneği geçen kod yazıyor.",
+          "solution": "Önce sınır durum testlerini öğrencinin yazmasını isteyen ödev alanı.",
+          "mvp": [
+            "Tek fonksiyon için görev ve rubrik yaz.",
+            "Öğrenciden iki sınır durum testi iste.",
+            "Kod ve testleri ayrı puanlayıp kısa geri bildirim ver."
+          ],
+          "difficulty": 2,
+          "starter": "ucbds-infra/otter-grader",
+          "query": "Üniversite programlama öğrencilerine koddan önce sınır durum testleri yazdıran ve öğretmen testleriyle otomatik geri bildirim veren ödev aracı"
+        },
+        {
+          "title": "Çözümünü anlat, sonra ilerle",
+          "for": "Kodlama kursu öğretmenleri",
+          "problem": "Testi geçen öğrencinin yöntemi anlayıp anlamadığı belirsiz.",
+          "solution": "Doğru koddan sonra küçük değişiklik ve gerekçe isteyen parametreli alıştırmalar.",
+          "mvp": [
+            "Üç basit kod sorusu hazırla.",
+            "Her birine açıklama ve değişiklik sorusu ekle.",
+            "Öğretmenin örnek yanıtlarla geri bildirimi onaylamasını sağla."
+          ],
+          "difficulty": 2,
+          "starter": "PrairieLearn/PrairieLearn",
+          "query": "Kodlama öğrencileri için otomatik testi geçen çözümün ardından gerekçe ve küçük değişiklik isteyen öğretmen denetimli alıştırma sistemi"
+        }
+      ],
+      "keywords": [
+        "programming education",
+        "computer science education",
+        "autograder",
+        "coding tutor",
+        "CodeAid",
+        "nbgrader",
+        "Exercism"
+      ],
+      "tr_keywords": [
+        "kodlama eğitim",
+        "programlama öğren",
+        "python öğren",
+        "bilişim ders",
+        "otomatik değerlendirme",
+        "hata ayıkla",
+        "kod açıkl"
+      ]
+    },
+    {
+      "id": "accessibility-special-education",
+      "icon": "♿",
+      "title": "Özel eğitim ve erişilebilirlik",
+      "short": "İçeriği okunabilir, duyulabilir veya sembollerle ifade edilebilir hâle getirmeye yardımcı olur.",
+      "why": "Aynı materyal her öğrencinin erişim ihtiyacını karşılamayabilir. Ses, altyazı, sade yönerge ve alternatif iletişim seçenekleri katılımı artırmayı amaçlar; uyarlamayı öğrenci, aile ve ilgili uzmanlarla birlikte seçmek gerekir.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "UNICEF çocuklar ve YZ rehberi, sürüm 3",
+          "url": "https://www.unicef.org/innocenti/reports/policy-guidance-ai-children",
+          "year": 2025,
+          "kind": "rapor",
+          "finding": "Rehber güvenlik, veri mahremiyeti, ayrımcılık yapmama ve engelli çocukların kapsanmasını tasarım gereksinimleri olarak ele alır; ürünlerin etkililik deneyi değildir."
+        },
+        {
+          "title": "MEB’in 2025–2029 eğitimde YZ yol haritası",
+          "url": "https://www.meb.gov.tr/egitimde-yapay-zeka-politika-belgesi-ve-eylem-plani-yururluge-girdi/haber/37531/tr",
+          "year": 2025,
+          "kind": "rapor",
+          "finding": "MEB’in 2025–2029 planı görme yetersizliğinde sesli okuma, işitme yetersizliğinde altyazı ve işaret dili teknolojilerini hedefler; bunlar duyurulan hedeflerdir, tamamlanmış etkililik sonuçları değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "cboard-org/cboard",
+          "why": "Resim ve metinden sese dayalı alternatif ve destekleyici iletişim panosu; öğrenciye uygun Türkçe sembol ve kelime setini uzmanla düzenleyebilirsin."
+        },
+        {
+          "name": "nvaccess/nvda",
+          "why": "Windows ekran okuyucusu; hazırlanan ders aracının klavye ve ekran okuyucuyla çalışmasını denemek ve eklenti geliştirmeyi incelemek için."
+        },
+        {
+          "name": "SYSTRAN/faster-whisper",
+          "why": "İzinli ders kaydından altyazı taslağı üretmek için; işitme erişilebilirliği açısından isim ve terimler insan kontrolü görmeli."
+        }
+      ],
+      "products": [
+        {
+          "name": "Cboard",
+          "url": "https://www.cboard.io/en/pricing/",
+          "what": "Semboller ve seslendirmeyle iletişimi destekler; bazı paylaşım ve ses özellikleri Pro planındadır.",
+          "price": "freemium"
+        },
+        {
+          "name": "Azure AI Immersive Reader",
+          "url": "https://azure.microsoft.com/en-us/pricing/details/immersive-reader/",
+          "what": "Uygulamaya sesli okuma ve odak desteği ekleyen servis; aylık ücretsiz kota ve sonrasında kullanıma bağlı ücret vardır.",
+          "price": "freemium"
+        }
+      ],
+      "tr": "BEP’teki bireysel hedef ve erişim ihtiyacını özel eğitim öğretmeniyle seç; tüm öğrenciler için aynı sadeleştirmeyi kullanma. Türkçe seslendirmeyi, ekran okuyucu sırasını ve kullanılan sembollerin anlaşılmasını dene; RAM raporu veya sağlık bilgisi toplamadan örnek içerikle başla.",
+      "risks": [
+        "Sağlık ve engellilik bilgileri hassastır; prototip için tanı veya ayrıntılı rapor isteme.",
+        "YZ çıktısı disleksi tanısı, BEP kararı veya uzman değerlendirmesi yerine geçmemeli.",
+        "Anlamı değiştiren sadeleştirme öğrenciyi öğrenme hedefinden uzaklaştırabilir.",
+        "Yanlış altyazı veya sembol iletişimde ciddi anlam kaymalarına yol açabilir."
+      ],
+      "ideas": [
+        {
+          "title": "Sınıfım için küçük iletişim panosu",
+          "for": "Alternatif iletişim kullanan öğrenciler ve özel eğitim öğretmenleri",
+          "problem": "Genel sembol panoları sınıfın günlük ihtiyaçlarına uymuyor.",
+          "solution": "Öğrencinin seçtiği ihtiyaçları Türkçe seslendiren sade ve çevrim dışı pano.",
+          "mvp": [
+            "Uzmanla 12 işlevsel kelime seç.",
+            "Sembol ve sesi öğrenciyle dene.",
+            "Çevrim dışı kullanım ve büyük dokunma alanları ekle."
+          ],
+          "difficulty": 2,
+          "starter": "cboard-org/cboard",
+          "query": "Özel eğitim öğretmenleri için öğrencinin günlük sınıf ihtiyaçlarına uyarlanmış Türkçe seslendirmeli alternatif iletişim panosu"
+        },
+        {
+          "title": "Altyazı taslağını birlikte düzelt",
+          "for": "İşitme erişim desteği isteyen öğrenciler ve öğretmenler",
+          "problem": "Ders videolarında doğru Türkçe altyazı bulunmuyor.",
+          "solution": "İzinli kaydı yerelde yazıya çevirip öğretmenin terimleri düzelttiği altyazı aracı.",
+          "mvp": [
+            "İki dakikalık örnek kaydı yerelde çözümle.",
+            "Metin ve zamanı düzenleme alanı ekle.",
+            "Onaylı SRT dosyasını dışa aktar ve kaydı sil."
+          ],
+          "difficulty": 2,
+          "starter": "SYSTRAN/faster-whisper",
+          "query": "Öğretmenler için izinli ders videolarından yerelde Türkçe altyazı taslağı çıkaran ve terimleri insan kontrolüyle düzelten araç"
+        },
+        {
+          "title": "Erişilebilir ders kontrol listesi",
+          "for": "Görme desteği isteyen öğrencilerle çalışan öğretmenler",
+          "problem": "Yeni ders araçları ekran okuyucu ve klavyeyle kullanılamıyor.",
+          "solution": "Bir örnek dersin başlık, odak sırası ve formül açıklamasını öğretmenle kontrol eden küçük rehber.",
+          "mvp": [
+            "Beş görevli örnek ders sayfası seç.",
+            "NVDA ve klavyeyle görevleri dene.",
+            "Sorunları ve metin karşılıklarını öğretmenle düzelt."
+          ],
+          "difficulty": 1,
+          "starter": "nvaccess/nvda",
+          "query": "Öğretmenler için ders sayfalarının NVDA ekran okuyucusu ve klavyeyle kullanılabilirliğini kontrol ettiren erişilebilirlik rehberi"
+        }
+      ],
+      "keywords": [
+        "special education",
+        "accessibility in education",
+        "assistive technology",
+        "AAC",
+        "dyslexia",
+        "inclusive education",
+        "Immersive Reader"
+      ],
+      "tr_keywords": [
+        "özel eğitim",
+        "erişilebilir",
+        "disleksi",
+        "bep",
+        "işitme",
+        "görme",
+        "alternatif iletişim",
+        "destekleyici iletişim"
+      ]
+    },
+    {
+      "id": "learning-analytics",
+      "icon": "📊",
+      "title": "Öğrenme analitiği ve erken destek",
+      "short": "Alıştırma ve LMS kayıtlarından öğretmenin destek verebileceği noktaları görünür kılar.",
+      "why": "Öğretmen her öğrencinin hangi konuda zorlandığını günlük olarak izleyemeyebilir. Bilgi izleme modelleri ve basit göstergeler görüşme için ipucu verebilir; tahminin doğruluğu, yapılan desteğin yararıyla birlikte sınanmalıdır.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "LMS içinde öğrenme analitiği müdahaleleri — Pan ve ark.",
+          "url": "https://learning-analytics.info/index.php/JLA/article/view/8093",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "27 çalışmanın sistematik derlemesi LMS içindeki analitik müdahaleleri inceler; tahmin üreten bir panel ile öğrenmeyi iyileştiren müdahale ayrı değerlendirilmelidir."
+        },
+        {
+          "title": "İnsan merkezli öğrenme analitiği ve eğitimde YZ — Alfredo ve ark.",
+          "url": "https://doi.org/10.1016/j.caeai.2024.100215",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "108 yayının derlemesi öğrenci ve öğretmenlerin tasarıma katılımında eksikler buldu; insan kontrolü, güvenilirlik ve kullanıcı katılımını birlikte ele almayı önerdi."
+        }
+      ],
+      "repos": [
+        {
+          "name": "CAHLR/pyBKT",
+          "why": "Doğru/yanlış yanıt dizilerinden beceriye hâkimiyet tahminleyen yorumlanabilir başlangıç; küçük veride önce basit oranlarla karşılaştır."
+        },
+        {
+          "name": "pykt-team/pykt-toolkit",
+          "why": "Derin bilgi izleme modellerini ortak deney düzeninde karşılaştırmak için; okul paneli değil araştırma kütüphanesidir."
+        },
+        {
+          "name": "moodle/moodle",
+          "why": "LMS kayıtları, göstergeler ve müdahale akışları için temel; yeni model kurmadan yerleşik analitikle başlamak mümkün."
+        }
+      ],
+      "products": [
+        {
+          "name": "Moodle LMS analitik araçları",
+          "url": "https://docs.moodle.org/en/Analytics",
+          "what": "Kendi kurulumunda öğrenme göstergeleri ve risk modelleri sunar; yazılım ücretsiz, barındırma ve bakım ayrıca gerekir.",
+          "price": "ücretsiz"
+        },
+        {
+          "name": "Canvas LMS",
+          "url": "https://www.instructure.com/products/canvas-tiers",
+          "what": "Ders etkinliği, öğrenci katılımı ve kurum planına bağlı analitik araçlarını birleştirir.",
+          "price": "kurumsal"
+        }
+      ],
+      "tr": "e-Okul veya MEBBİS’ten izinsiz veri çekmek yerine öğretmenin yetkili olduğu LMS dışa aktarımıyla ve kimliksiz örneklerle başla. MEB kazanımlarına beceri etiketi bağla; bağlantı sorunu veya devamsızlık gibi bağlamları öğretmen doğrulasın, otomatik öğrenci sıralaması yapma.",
+      "risks": [
+        "Düşük çevrim içi etkinlik düşük öğrenme anlamına gelmez; cihaz eşitsizliği sonuçları çarpıtabilir.",
+        "Risk etiketi öğrenciyi damgalayabilir ve beklentileri düşürebilir.",
+        "Geçmiş veriye uyan model başka sınıf veya dönemde başarısız olabilir.",
+        "Küçük sınıflarda toplu gösterge bile öğrenciyi tanımlayabilir; erişimi ve saklama süresini sınırla."
+      ],
+      "ideas": [
+        {
+          "title": "Bu hafta kiminle konuşalım?",
+          "for": "Üniversite ders yürütücüleri",
+          "problem": "Destek ihtiyacı bazen dönem sonunda fark ediliyor.",
+          "solution": "Son etkinlik ve tamamlanmamış ödevi öğretmen kontrolüne sunan destek listesi.",
+          "mvp": [
+            "Kimliksiz örnek LMS verisini içe aktar.",
+            "İki şeffaf kural ve açıklama göster.",
+            "Öğretmen görüşmesinden sonra yararlılığı kaydet."
+          ],
+          "difficulty": 2,
+          "starter": "moodle/moodle",
+          "query": "Üniversite öğretim elemanlarına LMS etkinliklerinden açıklanabilir erken destek listesi sunan ve görüşme sonucunu izleyen araç"
+        },
+        {
+          "title": "Kazanımda neyi biliyoruz?",
+          "for": "Ortaokul matematik öğretmenleri",
+          "problem": "Toplam puan hangi becerinin öğrenildiğini gizliyor.",
+          "solution": "Yanıtları kazanıma bağlayan ve belirsizliğiyle birlikte bilgi izleme tahmini sunan panel.",
+          "mvp": [
+            "Üç kazanım ve 20 onaylı soru seç.",
+            "Basit doğruluk oranıyla pyBKT tahminini karşılaştır.",
+            "Öğretmen seçtiği kazanıma küçük destek etkinliği eklesin."
+          ],
+          "difficulty": 3,
+          "starter": "CAHLR/pyBKT",
+          "query": "Ortaokul matematikte kazanım bazlı yanıt dizilerinden belirsizliği gösteren bilgi izleme ve öğretmen destek paneli"
+        },
+        {
+          "title": "Modelden önce kıyaslama",
+          "for": "Eğitim araştırmacıları ve öğretmen geliştiriciler",
+          "problem": "Yeni modelin basit yöntemden iyi olup olmadığı bilinmiyor.",
+          "solution": "Aynı öğrenci ve zaman ayrımıyla basit model ve bilgi izleme modellerini karşılaştıran küçük deney alanı.",
+          "mvp": [
+            "Açık ve izinli bir eğitim veri kümesi seç.",
+            "Gelecek kayıtların eğitime sızmasını önle.",
+            "Tahmin hatasını ve alt grupları raporla."
+          ],
+          "difficulty": 3,
+          "starter": "pykt-team/pykt-toolkit",
+          "query": "Eğitim verilerinde bilgi izleme modellerini basit yöntemlerle aynı öğrenci ve zaman ayrımında karşılaştıran açıklanabilir deney aracı"
+        }
+      ],
+      "keywords": [
+        "learning analytics",
+        "knowledge tracing",
+        "early warning education",
+        "student retention",
+        "LMS analytics",
+        "Bayesian knowledge tracing"
+      ],
+      "tr_keywords": [
+        "öğrenme analiti",
+        "erken uyar",
+        "erken destek",
+        "bilgi izle",
+        "kazanım takip",
+        "öğrenci katılım",
+        "lms veri"
+      ]
+    },
+    {
+      "id": "lms-classroom",
+      "icon": "🏫",
+      "title": "LMS ve sınıf araçları",
+      "short": "YZ desteğini öğretmenin kullandığı ders, ödev ve etkinlik akışına yerleştirir.",
+      "why": "Yeni araç için ayrı hesaplar ve kopyalanan içerikler öğretmen işini artırabilir. Moodle, Open edX veya H5P üstüne küçük bir eklenti kurmak, öğrencinin mevcut ders bağlamını koruyarak deneme yapmayı sağlayabilir.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "OECD 2026 Dijital Eğitim Görünümü",
+          "url": "https://www.oecd.org/en/publications/oecd-digital-education-outlook-2026_062a7394-en.html",
+          "year": 2026,
+          "kind": "rapor",
+          "finding": "Kanıt sentezi pedagojik tasarım ve öğretmen desteğinin önemini vurgular; daha iyi ürün veya yanıt elde etmek tek başına öğrenme kazanımı sayılmaz."
+        },
+        {
+          "title": "İnsan merkezli öğrenme analitiği ve eğitimde YZ — Alfredo ve ark.",
+          "url": "https://doi.org/10.1016/j.caeai.2024.100215",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "İnsan merkezli tasarım derlemesi son kullanıcıların süreçlere katılımında eksikler buldu; LMS eklentisini öğretmen ve öğrencilerle tasarlamak için dayanak sağlar, belirli bir eklentinin başarı kanıtı değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "moodle/moodle",
+          "why": "Ödev, soru bankası, yetki ve eklenti altyapısı olan LMS; mevcut ders içinde küçük YZ özelliği denemek için."
+        },
+        {
+          "name": "openedx/openedx-platform",
+          "why": "Open edX’in LMS ve Studio kodu; eski edx-platform adı buraya yönlenir, tam kurulum ilk proje için ağır olabilir."
+        },
+        {
+          "name": "h5p/h5p-php-library",
+          "why": "H5P paketlerini başka ortama bağlayan PHP temeli; YZ taslaklarını öğretmen onaylı etkileşimli içeriğe dönüştürme akışını incelemek için."
+        }
+      ],
+      "products": [
+        {
+          "name": "MoodleCloud",
+          "url": "https://www.moodlecloud.com/product-specifications/",
+          "what": "Moodle’ın barındırılan abonelik hizmeti; planlar kullanıcı ve özelleştirme sınırları içerir.",
+          "price": "ücretli"
+        },
+        {
+          "name": "H5P.com",
+          "url": "https://h5p.com/pricing",
+          "what": "Etkileşimli içerik ve LMS bütünleşmesi sunar; YZ ile içerik üretimi plana bağlıdır.",
+          "price": "ücretli"
+        }
+      ],
+      "tr": "EBA ve Google Classroom kullanıcılarını ilk aşamada hesap taşıtmadan, bağlantı veya öğretmen onaylı dosya çıktısıyla destekle. Moodle eklentisini önce okulun deneme kurulumunda çalıştır; yetki kapsamını dar tut ve güncel MEB kazanımlarıyla etkinlikleri etiketle.",
+      "risks": [
+        "LMS erişim anahtarı gereğinden fazla öğrenci ve ders bilgisi açabilir.",
+        "Eklenti sürüm uyumu ve bakım öğretmenin yükünü artırabilir.",
+        "H5P paketindeki görsel, video ve soru telifleri ayrıca kontrol edilmeli.",
+        "Üçüncü taraf YZ servisine giden veri, okulun barındırma sınırlarının dışına çıkabilir."
+      ],
+      "ideas": [
+        {
+          "title": "Moodle ödevinde ipucu düğmesi",
+          "for": "Lise ve üniversite öğretmenleri",
+          "problem": "Öğrenci ödev ekranını bırakıp bağlamsız sohbet aracına gidiyor.",
+          "solution": "Ödevin öğretmen onaylı ipuçlarını aynı ekranda sırayla açan eklenti.",
+          "mvp": [
+            "Tek ödevde üç onaylı ipucu tanımla.",
+            "Öğrencinin önce deneme yapmasını iste.",
+            "Toplu kullanım sayısı ve yardımsız çıkış sorusu ekle."
+          ],
+          "difficulty": 2,
+          "starter": "moodle/moodle",
+          "query": "Moodle ödevlerinde öğrenci denemesinden sonra kademeli öğretmen onaylı ipucu sunan küçük eğitim eklentisi"
+        },
+        {
+          "title": "H5P için taslak kontrol masası",
+          "for": "Etkileşimli içerik hazırlayan öğretmenler",
+          "problem": "YZ’nin yazdığı soruları ders etkinliğine aktarmak uğraştırıyor.",
+          "solution": "İzinli metinden taslak çıkarıp öğretmen onayından sonra H5P etkinliğine yerleştiren akış.",
+          "mvp": [
+            "Tek H5P içerik türüyle başla.",
+            "Soru ve anahtar için onay ekranı hazırla.",
+            "Örnek LMS’de puan ve erişilebilirliği dene."
+          ],
+          "difficulty": 3,
+          "starter": "h5p/h5p-php-library",
+          "query": "Öğretmenler için izinli ders metninden soru taslağı hazırlayan ve onaydan sonra H5P etkileşimli etkinliğine dönüştüren araç"
+        },
+        {
+          "title": "Açık dersin soru durağı",
+          "for": "Üniversite açık ders ekipleri",
+          "problem": "Açık ders öğrencisi yanlış anlamasını fark etmeden ilerliyor.",
+          "solution": "Her bölüm sonuna kaynaklı açıklama ve öğretim elemanı onaylı kontrol sorusu ekleyen ders akışı.",
+          "mvp": [
+            "Mevcut deneme dersinin bir bölümünü seç.",
+            "Üç kontrol sorusu ve onaylı açıklama ekle.",
+            "Ders ekibiyle yanıt ve gezinme akışını dene."
+          ],
+          "difficulty": 3,
+          "starter": "openedx/openedx-platform",
+          "query": "Open edX açık derslerinde bölüm sonu kontrol soruları ve kaynaklı açıklamalarla öğrenmeyi destekleyen öğretim elemanı denetimli araç"
+        }
+      ],
+      "keywords": [
+        "learning management system",
+        "Moodle",
+        "Open edX",
+        "H5P",
+        "Google Classroom",
+        "LTI",
+        "classroom tools"
+      ],
+      "tr_keywords": [
+        "lms",
+        "moodle",
+        "h5p",
+        "eba",
+        "uzaktan eğitim",
+        "sınıf araç",
+        "ders eklenti",
+        "ödev eklenti",
+        "açık ders"
+      ]
+    },
+    {
+      "id": "parent-school",
+      "icon": "🤝",
+      "title": "Veli iletişimi ve okul yönetimi",
+      "short": "Öğretmenin onayladığı anlaşılır duyuru, çeviri ve küçük yönetim işlerine destek verir.",
+      "why": "Bilginin doğru aileye, anlaşılır ve zamanında ulaşması okulun günlük işinin önemli parçasıdır. YZ taslak ve özet işlerini kolaylaştırabilir; öğrenci hakkında karar vermeyi ve aileyle ilişki kurmayı insanlardan devralmamalıdır.",
+      "levels": [
+        "ilkokul",
+        "ortaokul",
+        "lise",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "Öğrenmeyi desteklemek için velilerle çalışma — EEF rehberi",
+          "url": "https://educationendowmentfoundation.org.uk/education-evidence/guidance-reports/supporting-parents",
+          "year": 2018,
+          "kind": "rapor",
+          "finding": "Kanıt rehberi öğrenmeye odaklı ve aile koşullarına duyarlı iletişim önerir; stratejilerin sonuçları karışıktır ve rehber YZ mesajlarının etkisini sınamaz."
+        },
+        {
+          "title": "MEB’in 2025–2029 eğitimde YZ yol haritası",
+          "url": "https://www.meb.gov.tr/egitimde-yapay-zeka-politika-belgesi-ve-eylem-plani-yururluge-girdi/haber/37531/tr",
+          "year": 2025,
+          "kind": "rapor",
+          "finding": "MEB’in yol haritası okul ve yönetim süreçlerinde YZ kullanımını da kapsar; bu kapsam, veli mesajı yazan bir ürünün öğrenmeye etkisinin kanıtı değildir."
+        }
+      ],
+      "repos": [
+        {
+          "name": "GibbonEdu/core",
+          "why": "Öğrenci, veli ve öğretmen rolleri olan okul yönetim platformu; duyuru ve görüşme süreçlerini inceleyip dar bir uyarlama yapmak için."
+        },
+        {
+          "name": "frappe/education",
+          "why": "Devam, ders takvimi ve öğrenci portalı içeren eğitim yönetimi temeli; tüm sistemi taşımadan küçük bir yönetim akışını inceleyebilirsin."
+        },
+        {
+          "name": "LibreTranslate/LibreTranslate",
+          "why": "İzinli duyuruları kurum içinde çeviri taslağına dönüştürmek için; aileye göndermeden dil ve anlam kontrolü gerekir."
+        }
+      ],
+      "products": [
+        {
+          "name": "ClassDojo",
+          "url": "https://www.classdojo.com/en-us/plus/",
+          "what": "Temel öğretmen-veli mesajlaşması ücretsizdir; ailelere yönelik ek içerik ve özellikler Plus planındadır.",
+          "price": "freemium"
+        },
+        {
+          "name": "ParentSquare",
+          "url": "https://www.parentsquare.com/platform/compare-packages/",
+          "what": "Okul duyuruları, iki yönlü iletişim ve kurum planına bağlı YZ araçları sunar.",
+          "price": "kurumsal"
+        }
+      ],
+      "tr": "e-Okul ve MEBBİS’in yerine geçmeye çalışmadan duyuru taslağı, görüşme takvimi veya öğretmenin yetkili olduğu kayıt özetine odaklan. Türkçe dışındaki dillerde aileye giden çeviriyi kontrol et; resmî okul politikasını okul yönetimi onaylasın ve uygulama ilk sürümde kendiliğinden mesaj göndermesin.",
+      "risks": [
+        "Not, devamsızlık, sağlık ve aile koşulları yanlış alıcıya açılabilir.",
+        "Çeviri önemli tarihleri, izinleri veya okul politikasını yanlış aktarabilir.",
+        "Aile hakkında çıkarım veya otomatik risk puanı damgalayıcı olabilir.",
+        "Telefonu veya bağlantısı sınırlı aileler için basılı ve yüz yüze iletişim yolu korunmalı."
+      ],
+      "ideas": [
+        {
+          "title": "Duyuruyu sadeleştir ve doğrula",
+          "for": "Okul yöneticileri ve sınıf öğretmenleri",
+          "problem": "Uzun duyurularda tarih, yapılacak iş ve malzeme bilgisi kaçıyor.",
+          "solution": "Öğretmenin taslağını sadeleştirip tarih ve görevleri onay listesine çıkaran araç.",
+          "mvp": [
+            "Beş kimliksiz duyuruyla şablon kur.",
+            "Tarih ve görevleri ayrı doğrulat.",
+            "Yalnızca kopyalanabilir taslak üret."
+          ],
+          "difficulty": 1,
+          "starter": "GibbonEdu/core",
+          "query": "Okul öğretmenleri için veli duyurularını sade Türkçeye dönüştüren tarih ve görevleri doğrulatan onaylı mesaj taslağı aracı"
+        },
+        {
+          "title": "İki dilde aynı duyuru",
+          "for": "Çok dilli ailelerle çalışan öğretmenler",
+          "problem": "Aileler aynı duyuruyu farklı anlamlarla okuyabiliyor.",
+          "solution": "Kurumda çeviri taslağı üretip iki dili yan yana onaylatan yardımcı.",
+          "mvp": [
+            "Önce desteklenen tek dil çifti seç.",
+            "Tarih, yer ve kişi adlarını koru.",
+            "Bilen bir kişiye onaylatıp taslak olarak dışa aktar."
+          ],
+          "difficulty": 2,
+          "starter": "LibreTranslate/LibreTranslate",
+          "query": "Okullar için veli duyurularını desteklenen dillerde yerel çeviriyle hazırlayan ve insan onayından sonra dışa aktaran iletişim yardımcısı"
+        },
+        {
+          "title": "Görüşme sonrası küçük görev listesi",
+          "for": "Rehber öğretmenler ve okul ekipleri",
+          "problem": "Görüşmede kararlaştırılan işler takvimler arasında kayboluyor.",
+          "solution": "Hassas ayrıntıları almadan görev, sorumlu ve tarihi izleyen küçük yönetim panosu.",
+          "mvp": [
+            "Kimliksiz örneklerle üç görev alanı kur.",
+            "Öğretmen onayı ve dar rol erişimi ekle.",
+            "Tamamlanan görevleri süre sonunda sil."
+          ],
+          "difficulty": 2,
+          "starter": "frappe/education",
+          "query": "Rehber öğretmenler için veli görüşmesi sonrası hassas ayrıntı toplamadan görev sorumlu ve tarih takibi yapan okul yönetim aracı"
+        }
+      ],
+      "keywords": [
+        "parent communication",
+        "school communication",
+        "family engagement",
+        "school administration",
+        "ParentSquare",
+        "ClassDojo"
+      ],
+      "tr_keywords": [
+        "veli",
+        "okul aile",
+        "duyuru",
+        "rehberlik",
+        "okul yönet",
+        "devamsızlık",
+        "mebbis",
+        "e-okul"
+      ]
+    },
+    {
+      "id": "ai-literacy-integrity",
+      "icon": "🧭",
+      "title": "YZ okuryazarlığı ve akademik dürüstlük",
+      "short": "Öğrenci ve öğretmenin YZ’yi sorgulamasını, kullanımını açıklamasını ve ortak kurallar koymasını sağlar.",
+      "why": "Bir aracın kullanılması, çıktısının neden güvenilir veya sorunlu olduğunun bilindiği anlamına gelmez. Küçük deneyler, kaynak kontrolü ve açık kullanım kuralları, öğrenme hedefini ve öğrencinin kendi emeğini görünür kılar.",
+      "levels": [
+        "ortaokul",
+        "lise",
+        "üniversite",
+        "yetişkin",
+        "öğretmen"
+      ],
+      "evidence": [
+        {
+          "title": "UNESCO öğrenciler için YZ yetkinlik çerçevesi",
+          "url": "https://www.unesco.org/en/articles/ai-competency-framework-students",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "İnsan merkezli yaklaşım, etik, teknik uygulama ve sistem tasarımında 12 yetkinlik önerir; anlama, uygulama ve üretme düzeylerini ayırır."
+        },
+        {
+          "title": "UNESCO öğretmenler için YZ yetkinlik çerçevesi",
+          "url": "https://www.unesco.org/en/articles/ai-competency-framework-teachers",
+          "year": 2024,
+          "kind": "rapor",
+          "finding": "Çerçeve YZ pedagojisini ve etik yeterlikleri öğretmen gelişiminin parçası olarak tanımlar; ürünlerin öğrenme etkisini ölçen deney değildir."
+        },
+        {
+          "title": "MEB’in eğitimde YZ etiği tavsiyeleri",
+          "url": "https://www.meb.gov.tr/mebden-egitimde-yapay-zekaya-yonelik-etik-tavsiyeler/haber/38766/tr",
+          "year": 2025,
+          "kind": "rapor",
+          "finding": "Tavsiyeler etik, kapsayıcı ve insan merkezli YZ kullanımına rehberlik eder; okulun kullanım politikasını tartışmak için yerel bir başlangıçtır."
+        }
+      ],
+      "repos": [
+        {
+          "name": "microsoft/AI-For-Beginners",
+          "why": "YZ kavramları, etik, kısa sınavlar ve uygulamalar içeren ders deposu; Türkçe çevirileri öğretmen kontrolüyle uyarlayabilirsin."
+        },
+        {
+          "name": "tensorflow/playground",
+          "why": "Sinir ağı davranışını tarayıcıda görselleştiren küçük deney ortamı; veri, hata ve genelleme tartışmaları için."
+        },
+        {
+          "name": "ml5js/ml5-library",
+          "why": "Tarayıcıda erişilebilir makine öğrenmesi örnekleri geliştirmek için; veri yanlılığı ve etik veri toplama tartışmalarını destekleyen başlangıç."
+        }
+      ],
+      "products": [
+        {
+          "name": "Experience AI",
+          "url": "https://experience-ai.org/en/",
+          "what": "Raspberry Pi Foundation ve Google DeepMind’ın ücretsiz YZ dersleri ve öğretmen kaynakları.",
+          "price": "ücretsiz"
+        },
+        {
+          "name": "Elements of AI",
+          "url": "https://course.elementsofai.com/",
+          "what": "YZ kavramları ve toplumsal etkileri için ücretsiz, alıştırmalı giriş dersi.",
+          "price": "ücretsiz"
+        }
+      ],
+      "tr": "MEB’in güncel etik belgeleri ve okulun ölçme kurallarıyla birlikte ders bazında hangi YZ kullanımının uygun olduğunu konuş. Ödev yönergesine izin verilen yardım, kaynak gösterme ve öğrencinin kendi açıklaması alanını ekle; politikanın öğrenci ve öğretmenlerce anlaşılmasını kısa örneklerle dene.",
+      "risks": [
+        "YZ metin tespit puanı tek başına öğrenci hakkında suçlama veya ceza gerekçesi olmamalı.",
+        "Herkesin ücretli araca erişebildiği varsayımı eşitsizlik yaratabilir.",
+        "Yüz, ses veya kimlik bilgisi içeren sınıf veri kümeleri gereksiz mahremiyet riski taşır.",
+        "Etkinlikte kullanılan modelin kesin ve tarafsız olduğu izlenimi verilmemeli."
+      ],
+      "ideas": [
+        {
+          "title": "Ödev için YZ kullanım kartı",
+          "for": "Lise ve üniversite öğretmenleri",
+          "problem": "Ödevlerde ne kadar yardımın uygun olduğu belirsiz.",
+          "solution": "Ders hedefine göre izin, açıklama ve örnek kullanım içeren kısa yönerge hazırlayan araç.",
+          "mvp": [
+            "Üç örnek ödev için izinli kullanımı tanımla.",
+            "Öğrencilerle anlaşılmayan kuralları tartış.",
+            "Kullanılan yardım ve yapılan düzeltmeyi açıklama alanı ekle."
+          ],
+          "difficulty": 1,
+          "starter": "microsoft/AI-For-Beginners",
+          "query": "Öğretmenler için ödev hedeflerine göre YZ kullanım sınırları ve öğrenci açıklama alanı olan Türkçe akademik dürüstlük yönergesi hazırlayan araç"
+        },
+        {
+          "title": "Model neden yanıldı?",
+          "for": "Ortaokul ve lise YZ kulüpleri",
+          "problem": "Model çıktısı kesin bilgi gibi kabul ediliyor.",
+          "solution": "Aynı problemde veri dağılımını değiştirip hatayı gözle görünür yapan küçük deney.",
+          "mvp": [
+            "İki boyutlu açık örnek veri seç.",
+            "Eğitim ve deneme verisini ayır.",
+            "Öğrenciden hatayı ve sınırı kendi cümlesiyle açıklamasını iste."
+          ],
+          "difficulty": 1,
+          "starter": "tensorflow/playground",
+          "query": "Lise öğrencilerine veri dağılımı ve genelleme hatalarını etkileşimli sinir ağı deneyleriyle öğreten YZ okuryazarlığı aracı"
+        },
+        {
+          "title": "Sınıfın yanlılık laboratuvarı",
+          "for": "Bilişim öğretmenleri ve lise öğrencileri",
+          "problem": "Öğrenciler az ve dengesiz verinin sonucunu göremiyor.",
+          "solution": "Kişisel veri kullanmadan nesne örnekleriyle iki sınıflandırıcıyı karşılaştıran etkinlik.",
+          "mvp": [
+            "Yüz yerine iki nesne sınıfı seç.",
+            "Dengeli ve dengesiz örneklerle yerel deney yap.",
+            "Hata tablosu ve veri iyileştirme önerisi hazırlat."
+          ],
+          "difficulty": 2,
+          "starter": "ml5js/ml5-library",
+          "query": "Lise öğrencileri için kişisel veri toplamadan nesne sınıflandırmada veri dengesizliği ve YZ yanlılığını gösteren tarayıcı laboratuvarı"
+        }
+      ],
+      "keywords": [
+        "AI literacy",
+        "academic integrity",
+        "AI competency",
+        "AI education policy",
+        "responsible AI education",
+        "Experience AI"
+      ],
+      "tr_keywords": [
+        "yz okuryazar",
+        "yapay zeka okuryazar",
+        "akademik dürüst",
+        "intihal",
+        "yz kullanım politika",
+        "yapay zeka etik",
+        "kaynak doğrula",
+        "veri yanlı"
+      ]
+    }
+  ]
+}

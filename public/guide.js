@@ -42,6 +42,20 @@ window.GUIDE = [
     ],
   },
   {
+    title: 'Eğitimde YZ',
+    desc: 'Öğretme ve öğrenmede YZ: sınıf deneyimleri, araştırma haberleri ve araç duyuruları. Genel eğitim yayınlarından yalnızca YZ içerikleri süzülür; ürün bloglarını yayıncının kendi anlatımı olarak oku.',
+    items: [
+      { id: 'edsurge', name: 'EdSurge', url: 'https://www.edsurge.com/', why: 'Öğretmen deneyimleri, eğitim teknolojileri ve YZ kullanımının sınıfa etkisi.' },
+      { id: 'hechinger', name: 'The Hechinger Report', url: 'https://hechingerreport.org/', why: 'Öğrenme, fırsat eşitliği ve YZ araçlarının eğitimdeki sonuçları üzerine habercilik.' },
+      { id: 'the74', name: 'The 74', url: 'https://www.the74million.org/', why: 'Okul politikaları, öğretmenler ve öğrenciler açısından YZ haberleri.' },
+      { id: 'eschoolnews', name: 'eSchool News', url: 'https://www.eschoolnews.com/', why: 'Sınıfta YZ kullanımı, öğretmen iş akışları ve okul teknolojileri.' },
+      { id: 'gettingsmart', name: 'Getting Smart', url: 'https://www.gettingsmart.com/', why: 'Proje temelli öğrenme ve YZ destekli eğitim uygulamaları.' },
+      { id: 'khanblog', name: 'Khan Academy Blog', url: 'https://blog.khanacademy.org/', why: 'Khanmigo ve YZ öğretmen araçlarının kullanımı hakkında doğrudan ürün ekibinden yazılar.' },
+      { id: 'googleedu', name: 'Google for Education', url: 'https://blog.google/outreach-initiatives/education/', why: 'Gemini ve Classroom gibi eğitim araçlarının resmi duyuruları.' },
+      { id: 'edtechk12', name: 'EdTech Magazine · K–12', url: 'https://edtechmagazine.com/k12/', why: 'Okullarda YZ altyapısı, uygulama örnekleri ve veri güvenliği.' },
+    ],
+  },
+  {
     title: 'Bültenler — günün özeti',
     desc: 'Birinin senin için okuyup süzdüğü günlük/haftalık özetler.',
     items: [

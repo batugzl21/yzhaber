@@ -1,12 +1,12 @@
 // Fikir Lab arayüzü: tek kutu, tek düğme; sonuçlar yukarıdan aşağıya bir cevap gibi okunur.
 // Arama mantığı lab-engine.js içinde. Burada yalnızca çizim ve etkileşim var.
 // app.js globalleri (S, $, esc, store, toast, copy, ago…) bu dosyadan sonra yüklenir; yalnızca fonksiyon içinde kullanılır.
-const L = { run: null, ctrl: null, err: null, draft: '', raf: 0, http: null, httpT: 0 };
+const L = { run: null, ctrl: null, err: null, draft: '', raf: 0, http: null, httpT: 0, mode: null, atlas: null, atlasTask: null, atlasState: '', category: '', level: '' };
 
 const LAB_EX = [
   'Kuaförler için WhatsApp’tan randevu alan bir asistan',
-  'Diş klinikleri için hasta hatırlatma botu',
-  'Öğrenciler için PDF’ten sınav sorusu üreten araç',
+  'LGS’ye hazırlanan öğrenciler için yanlış soruları tekrar ettiren uygulama',
+  'Öğretmenler için kazanıma uygun ders planı ve rubrik hazırlayan asistan',
   'Küçük esnaf için fatura ve stok takibi',
   'Toplantı kayıtlarını özetleyen Chrome eklentisi',
 ];
@@ -108,6 +108,8 @@ async function labRun(idea, o = {}) {
     toast('Önce fikrini kısaca yaz');
     return $('#labIdea')?.focus();
   }
+  labSetMode('research');
+  L.category = '';
   L.ctrl?.abort();
   const run = (L.run = { idea, done: new Set(), partial: null });
   const ctrl = (L.ctrl = new AbortController());
@@ -132,7 +134,10 @@ async function labRun(idea, o = {}) {
     url: i.url, source: i.source, cat: i.cat, date: i.date,
   }));
   try {
+    const atlas = await labLoadAtlas();
+    if (run !== L.run || ctrl.signal.aborted) return;
     const res = await LabEngine.research(idea, {
+      atlas: atlas || undefined,
       signal: ctrl.signal,
       localItems,
       cache: labCache(),
@@ -172,6 +177,8 @@ function labOpen(id) {
   L.ctrl?.abort();
   L.run = null;
   L.err = null;
+  labSetMode('research');
+  L.category = '';
   L.draft = r.idea;
   S.labRes = r;
   if (S.openKey) location.hash = '';
@@ -214,6 +221,7 @@ function renderLab() {
           <button class="btn primary lab-go" data-lab-go>Araştır</button>
         </div>
       </div>
+      <div id="labModes"></div>
       <div class="lab-ex" aria-label="Örnek fikirler">${LAB_EX.map((t, i) => `<button class="lab-chip" data-lab-chip="${i}">${esc(t)}</button>`).join('')}</div>
       <div class="lab-set-row">
         <button class="link-btn lab-set-toggle" data-lab-settings aria-expanded="false" aria-controls="labSet">⚙ Daha isabetli sonuçlar</button>
@@ -236,6 +244,7 @@ function renderLab() {
     const ta = $('#labIdea');
     if (ta) labGrow(ta);
   }
+  labLoadAtlas();
   renderLabOut();
 }
 
@@ -254,6 +263,8 @@ function labPatch(out, parts) {
 function renderLabOut() {
   const out = $('#labOut');
   if (!out) return;
+  labRenderModes();
+  if (labMode() === 'atlas' && L.atlasState !== 'error') return labPatch(out, [{ id: 'atlas', html: labAtlasHtml() }]);
   if (L.run) return labPatch(out, labResultParts(L.run.partial || {}, L.run));
   if (L.err) {
     return labPatch(out, [{ id: 'err', html: `<div class="lab-note lab-err"><p>${esc(L.err.msg)}</p><button class="btn" data-lab-retry>Tekrar dene</button></div>` }]);
@@ -266,6 +277,7 @@ function labResultParts(r, run) {
   const parts = [];
   if (run) parts.push({ id: 'progress', html: labProgress(run) });
   if (r.verdict) parts.push({ id: 'verdict', html: labVerdict(r) });
+  if (r.edu) parts.push({ id: 'edu', html: labEduNotes(r) });
   if (!run && Date.now() - labTs(r.at) < 15 * 60000) parts.push({ id: 'notes', html: labNotes(r) });
   parts.push({ id: 'repos', html: labRepos(r, run) });
   parts.push({ id: 'blocks', html: labBlocks(r) });
@@ -322,6 +334,7 @@ function labNotes(r) {
         : (r.repos || []).length ? 'GitHub aramalarının bir kısmı tamamlanamadı; sonuçlar eksik olabilir.' : 'GitHub’a ulaşılamadı; bağlantını kontrol edip tekrar dene.');
     } else if (s.id === 'hn') msg.push('Hacker News’e ulaşılamadı; ürün ve talep bölümleri eksik olabilir.');
     else if (s.id === 'claude') msg.push(s.kind === 'auth' ? `Claude anahtarı kabul edilmedi; temel modda devam ettik. ${gear} kontrol et.` : 'Akıllı mod bu sefer çalışmadı; temel modda devam ettik.');
+    else if (s.id === 'stackexchange') msg.push('Eğitimci sorularına bu kez ulaşılamadı; diğer kaynaklarla devam ettik.');
     else if (s.id === 'translate') msg.push('Çeviri yapılamadı; bazı metinler İngilizce kalmış olabilir.');
   }
   return msg.length ? `<div class="lab-notes">${msg.map((m) => `<p class="lab-note">${m}</p>`).join('')}</div>` : '';
@@ -335,25 +348,28 @@ function labRepos(r, run) {
     const ghFail = (r.sources || []).some((s) => s.id === 'github' && !s.ok);
     return run || ghFail || !r.verdict ? '' : '<p class="lab-gentle">Bu fikre çok yakın açık kaynak proje bulamadık. Üstteki terimleri “Düzenle” ile değiştirip tekrar deneyebilirsin.</p>';
   }
-  return labSec('Başlangıç noktaları', 'Sıfırdan yazmak yerine fork’layıp uyarlayabileceğin açık kaynak projeler.', `<div class="lab-repos">${list.map((p) => {
-    const [own, nm] = String(p.name).split('/');
-    const fr = labFresh(p.pushed);
-    const lic = labLicense(p.license);
-    const why = (p.why || []).slice(0, 3);
-    return `<article class="lab-repo ${p.best ? 'best' : ''}">
-      ${p.best ? '<span class="lab-ribbon">En iyi temel</span>' : ''}
-      <h4 class="lr-name">${labLink(p.url, nm ? `<span>${esc(own)}/</span>${esc(nm)}` : esc(p.name))}</h4>
-      ${p.desc || p.desc_tr ? `<p class="lr-desc" title="${esc(p.desc || '')}">${esc(p.desc_tr || p.desc)}</p>` : ''}
-      <div class="lr-badges">
-        <span class="bd" title="GitHub yıldızı">⭐ ${labNum(p.stars)}</span>
-        ${p.archived ? '<span class="bd bad">Arşivlenmiş</span>' : fr ? `<span class="bd ${fr.c}">${fr.t}</span>` : ''}
-        <span class="bd ${lic.c}" ${lic.tip ? `title="${esc(lic.tip)}"` : ''}>${esc(lic.t)}</span>
-        ${p.lang ? `<span class="bd">${esc(p.lang)}</span>` : ''}
-      </div>
-      ${why.length ? `<div class="lr-why"><h5>Neden önerdik</h5><ul>${why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
-      ${labUrl(p.url) ? `<a class="btn lr-open" href="${esc(p.url)}">GitHub’da aç ↗</a>` : ''}
-    </article>`;
-  }).join('')}</div>`);
+  return labSec('Başlangıç noktaları', 'Sıfırdan yazmak yerine fork’layıp uyarlayabileceğin açık kaynak projeler.', `<div class="lab-repos">${list.map(labRepoCard).join('')}</div>`);
+}
+
+function labRepoCard(p) {
+  const [own, nm] = String(p.name).split('/');
+  const fr = labFresh(p.pushed);
+  const lic = labLicense(p.license);
+  const why = (Array.isArray(p.why) ? p.why : p.why ? [p.why] : []).slice(0, 3);
+  return `<article class="lab-repo ${p.best ? 'best' : ''}">
+    ${p.best ? '<span class="lab-ribbon">En iyi temel</span>' : ''}
+    <h4 class="lr-name">${labLink(p.url, nm ? `<span>${esc(own)}/</span>${esc(nm)}` : esc(p.name))}</h4>
+    ${p.desc || p.desc_tr ? `<p class="lr-desc" title="${esc(p.desc || '')}">${esc(p.desc_tr || p.desc)}</p>` : ''}
+    <div class="lr-badges">
+      ${p.curated ? '<span class="bd edu-badge">Atlas</span>' : ''}
+      <span class="bd" title="GitHub yıldızı">⭐ ${labNum(p.stars)}</span>
+      ${p.archived ? '<span class="bd bad">Arşivlenmiş</span>' : fr ? `<span class="bd ${fr.c}">${fr.t}</span>` : ''}
+      <span class="bd ${lic.c}" ${lic.tip ? `title="${esc(lic.tip)}"` : ''}>${esc(lic.t)}</span>
+      ${p.lang ? `<span class="bd">${esc(p.lang)}</span>` : ''}
+    </div>
+    ${why.length ? `<div class="lr-why"><h5>Neden önerdik</h5><ul>${why.map((w) => `<li>${esc(w)}</li>`).join('')}</ul></div>` : ''}
+    ${labUrl(p.url) ? `<a class="btn lr-open" href="${esc(p.url)}">GitHub’da aç ↗</a>` : ''}
+  </article>`;
 }
 
 function labBlocks(r) {
@@ -389,9 +405,9 @@ function labProducts(r) {
 function labNeeds(r) {
   const list = r.needs || [];
   if (!list.length) return '';
-  return labSec('İnsanlar ne istiyor', 'Gerçek yorumlardan ve en çok 👍 alan açık isteklerden alıntılar.', `<div class="lab-quotes">${list.map((n) => {
+  return labSec('İnsanlar ne istiyor', 'Topluluk yorumları, eğitimci soruları ve açık geliştirme istekleri.', `<div class="lab-quotes">${list.map((n) => {
     const gh = n.source === 'GitHub isteği';
-    const meta = [n.source, gh && n.where ? n.where : '', labDate(n.date), n.votes ? `${gh ? '👍' : '▲'} ${n.votes}` : ''].filter(Boolean).join(' · ');
+    const meta = [n.source, (gh || n.source === 'Eğitimci sorusu') && n.where ? n.where : '', labDate(n.date), n.votes ? `${gh ? '👍' : '▲'} ${n.votes}` : ''].filter(Boolean).join(' · ');
     const orig = n.text && n.text_tr && n.text !== n.text_tr;
     return `<figure class="lab-quote">
       <blockquote>${esc(n.text_tr || n.text)}</blockquote>
@@ -413,7 +429,7 @@ function labNext(r) {
       <button class="btn" data-lab-md>Markdown indir</button>
     </div>
     <a class="ln-open" id="labClaudeLink" href="https://claude.ai/new" ${L.copied === r.id ? '' : 'hidden'}>İstem kopyalandı. claude.ai’yi aç ↗</a>
-    <p class="note">Sonuçlar GitHub ve Hacker News’ten otomatik toplandı; karar vermeden önce kaynakları kontrol et.</p>
+    <p class="note">Sonuçlar ${r.edu ? 'GitHub, Hacker News ve eğitimci topluluklarından' : 'GitHub ve Hacker News’ten'} otomatik toplandı; karar vermeden önce kaynakları kontrol et.</p>
   </section>`;
 }
 
@@ -461,18 +477,148 @@ function renderLabTeaser() {
     <label class="sr-only" for="tzIn">Fikrin</label>
     <input id="tzIn" class="tz-in" maxlength="300" placeholder="Örn: Kuaförler için randevu asistanı" autocomplete="off" enterkeyhint="search">
     <button class="btn primary full" data-lab-tz>Araştır</button>
+    <button class="link-btn tz-atlas" data-lab-atlas>🎓 Eğitimde YZ Atlası →</button>
     <div class="tz-last" id="tzLast"></div>`;
   }
   const last = labSavedList()[0];
   $('#tzLast').innerHTML = last ? `<span>Son araştırma</span><button class="link-btn" data-lab-open="${esc(last.id)}">${esc(labClip(last.idea, 70))}</button>` : '';
 }
 
+
+// ─── Eğitim Atlası ──────────────────────────────────────────────────────
+const LAB_LEVELS = [['', 'Hepsi'], ['ilkokul', 'İlkokul'], ['ortaokul', 'Ortaokul'], ['lise', 'Lise'], ['üniversite', 'Üniversite'], ['öğretmen', 'Öğretmen']];
+const labLevelName = (id) => LAB_LEVELS.find(([k]) => k === id)?.[1] || (id === 'yetişkin' ? 'Yetişkin' : id);
+function labMode() {
+  if (!L.mode) {
+    const saved = store.get('lab.mode', '');
+    L.mode = ['research', 'atlas'].includes(saved) ? saved : S.labRes || labSavedList().length ? 'research' : 'atlas';
+  }
+  return L.mode;
+}
+function labSetMode(mode) {
+  L.mode = mode === 'atlas' ? 'atlas' : 'research';
+  store.set('lab.mode', L.mode);
+}
+function labLoadAtlas() {
+  if (!L.atlasTask) {
+    L.atlasState = 'loading';
+    L.atlasTask = (async () => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 12000);
+      try {
+        const response = await fetch('data/edu-atlas.json', { signal: ctrl.signal });
+        if (!response.ok) throw new Error('Atlas');
+        const atlas = await response.json();
+        if (!Array.isArray(atlas?.categories) || !atlas.categories.length) throw new Error('Atlas');
+        L.atlas = atlas;
+        L.atlasState = 'ready';
+        return atlas;
+      } catch {
+        L.atlasState = 'error';
+        return null;
+      } finally {
+        clearTimeout(timer);
+        if (S.view === 'lab') renderLabOut();
+      }
+    })();
+  }
+  return L.atlasTask;
+}
+function labRenderModes() {
+  const box = $('#labModes');
+  if (!box) return;
+  const mode = labMode();
+  const html = L.atlasState === 'error'
+    ? '<p class="note atlas-unavailable" role="status">Eğitim Atlası şu an yüklenemedi. Fikrini yazarak araştırmaya devam edebilirsin.</p>'
+    : '<div class="lab-modes" role="group" aria-label="Fikir Lab görünümü">' + [['research', 'Fikrini araştır'], ['atlas', '🎓 Eğitimde YZ Atlası']].map(([id, title]) => '<button data-lab-mode="' + id + '" aria-pressed="' + (mode === id) + '" class="' + (mode === id ? 'on' : '') + '">' + title + '</button>').join('') + '</div>';
+  if (box._h !== html) { box.innerHTML = html; box._h = html; }
+}
+function labEvidence(list) {
+  return '<div class="atlas-evidence">' + (list || []).map((e) => '<article><div class="atlas-meta">' + (e.kind ? '<span class="bd edu-badge">' + esc(e.kind) + '</span>' : '') + (e.year ? '<span>' + esc(e.year) + '</span>' : '') + '</div><h4>' + labLink(e.url, esc(e.title)) + '</h4><p>' + esc(e.finding || '') + '</p>' + (labUrl(e.url) ? labLink(e.url, 'Araştırmayı oku ↗', 'link-btn') : '') + '</article>').join('') + '</div>';
+}
+function labAtlasIdeas(cat, limit = Infinity) {
+  return '<div class="atlas-ideas">' + (cat.ideas || []).slice(0, limit).map((idea, index) => {
+    const difficulty = Math.max(1, Math.min(3, Number(idea.difficulty) || 1));
+    const starter = /^[\w.-]+\/[\w.-]+$/.test(idea.starter || '') ? 'https://github.com/' + idea.starter : '';
+    return '<article class="atlas-idea"><div class="atlas-meta"><span>' + esc(idea.for || '') + '</span><span class="atlas-difficulty" aria-label="Zorluk: ' + difficulty + ' / 3" title="Zorluk: ' + difficulty + ' / 3">' + '●'.repeat(difficulty) + '<span aria-hidden="true">' + '○'.repeat(3 - difficulty) + '</span></span></div><h4>' + esc(idea.title) + '</h4><p><b>İhtiyaç:</b> ' + esc(idea.problem || '') + '</p><p><b>Çözüm:</b> ' + esc(idea.solution || '') + '</p>' + (idea.mvp?.length ? '<details><summary>İlk sürümde neler olsun?</summary><ol>' + idea.mvp.map((step) => '<li>' + esc(step) + '</li>').join('') + '</ol></details>' : '') + (starter ? '<p class="atlas-starter">Başlangıç: ' + labLink(starter, esc(idea.starter), 'link-btn') + '</p>' : '') + '<button class="btn primary" data-lab-idea="' + esc(cat.id) + '" data-idea-index="' + index + '">Bu fikri araştır</button></article>';
+  }).join('') + '</div>';
+}
+function labAtlasNews(cat) {
+  const norm = (s) => String(s || '').toLocaleLowerCase('tr').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ı/g, 'i');
+  const terms = [...(cat.keywords || []), ...(cat.tr_keywords || [])].map(norm).filter(Boolean);
+  const now = Date.now();
+  const list = (S.data?.items || []).filter((it) => {
+    const age = now - labTs(it.date);
+    const text = norm([it.title, it.summary, it.i18n?.tr?.t, it.i18n?.tr?.s].filter(Boolean).join(' '));
+    return age >= 0 && age < 21 * 864e5 && terms.some((word) => text.includes(word));
+  }).sort((a, b) => labTs(b.date) - labTs(a.date)).slice(0, 5);
+  return labSec('Radar’da son haberler', 'Bu alanla ilgili son 21 gündeki başlıklar.', list.length ? '<ul class="lab-rows">' + list.map((it) => '<li><button class="lab-row lab-row-a" data-open="' + esc(it.key) + '"><span class="lrow-t">' + esc(it.i18n?.tr?.t || it.title) + '</span><span class="lrow-m">' + esc(it.source) + ' · ' + esc(ago(labTs(it.date))) + '</span></button></li>').join('') + '</ul>' : '<p class="lab-note">Bu başlıkta henüz yeni haber yok. Diğer eğitim haberlerine Eğitim sekmesinden bakabilirsin.</p>');
+}
+function labAtlasHtml() {
+  if (!L.atlas) return '<p class="lab-note" role="status">Eğitim Atlası yükleniyor…</p>';
+  const cat = L.atlas.categories.find((c) => c.id === L.category);
+  if (cat) {
+    const repos = (cat.repos || []).map((r) => ({ ...r, curated: true }));
+    const products = (cat.products || []).map((p) => '<li class="lab-row"><div class="lrow-main">' + labLink(p.url, esc(p.name), 'lrow-t') + '<p>' + esc(p.what || '') + '</p></div><span class="bd">' + esc(p.price || '') + '</span></li>').join('');
+    return '<div class="atlas-detail"><button class="link-btn atlas-back" data-lab-atlas>← Atlas</button><header class="atlas-head"><span class="atlas-icon" aria-hidden="true">' + esc(cat.icon) + '</span><h3 tabindex="-1" data-atlas-heading>' + esc(cat.title) + '</h3><p>' + esc(cat.why) + '</p><div class="atlas-meta">' + (cat.levels || []).map((l) => '<span class="bd">' + esc(labLevelName(l)) + '</span>').join('') + '</div></header>'
+      + labSec('Araştırmalar ne diyor', 'Bulguyu, çalışma türünü ve kaynağını birlikte incele.', labEvidence(cat.evidence))
+      + labSec('Hazır projeler', 'Kodunu inceleyip kendi ihtiyacına uyarlayabileceğin başlangıçlar.', repos.length ? '<div class="lab-repos">' + repos.map(labRepoCard).join('') + '</div>' : '<p class="lab-note">Bu kategori için doğrulanmış proje henüz eklenmedi.</p>')
+      + (products ? labSec('Kullanılan ürünler', 'Mevcut araçları inceleyerek ihtiyacını ve farkını netleştir.', '<ul class="lab-rows">' + products + '</ul>') : '')
+      + labSec('Bunu sen yap: fikirler', 'Küçük bir ilk sürümle başlayabileceğin somut fikirler.', labAtlasIdeas(cat))
+      + labSec('Türkiye’ye uyarlarken', '', '<p class="atlas-context">' + esc(cat.tr || '') + '</p>')
+      + labSec('Dikkat edilecekler', '', '<ul class="atlas-risks">' + (cat.risks || []).map((risk) => '<li>' + esc(risk) + '</li>').join('') + '</ul>')
+      + labAtlasNews(cat) + '</div>';
+  }
+  const cats = L.atlas.categories.filter((c) => !L.level || (c.levels || []).includes(L.level));
+  return '<section class="atlas-home"><header class="atlas-head"><h3 tabindex="-1" data-atlas-heading>🎓 Eğitimde YZ Atlası</h3><p>' + esc(L.atlas.intro || '') + '</p></header><div class="atlas-filters" role="group" aria-label="Eğitim düzeyi">' + LAB_LEVELS.map(([id, title]) => '<button class="lab-chip" data-lab-level="' + esc(id) + '" aria-pressed="' + (id === L.level) + '">' + esc(title) + '</button>').join('') + '</div><div class="atlas-grid">' + cats.map((c) => '<button class="atlas-card" data-lab-category="' + esc(c.id) + '"><span class="atlas-icon" aria-hidden="true">' + esc(c.icon) + '</span><h4>' + esc(c.title) + '</h4><p>' + esc(c.short) + '</p><span class="atlas-count">' + (c.repos || []).length + ' proje · ' + (c.ideas || []).length + ' fikir <span aria-hidden="true">→</span></span></button>').join('') + '</div>' + (!cats.length ? '<p class="lab-note">Bu düzeyde henüz kategori yok. Hepsi ile diğer alanlara bakabilirsin.</p>' : '') + '</section>';
+}
+function labEduNotes(r) {
+  const cats = (r.edu.cats || []).map((match) => L.atlas?.categories.find((c) => c.id === match.id)).filter(Boolean);
+  const evidence = r.edu.evidence?.length ? r.edu.evidence : cats.flatMap((c) => c.evidence || []).filter((e, i, a) => a.findIndex((x) => x.url === e.url) === i).slice(0, 4);
+  const chips = (r.edu.cats || []).map((c) => L.atlas?.categories.some((x) => x.id === c.id) ? '<button class="lab-chip" data-lab-category="' + esc(c.id) + '">' + esc(c.title) + ' →</button>' : '<span class="bd">' + esc(c.title) + '</span>').join('');
+  const risks = [...new Set(cats.flatMap((c) => c.risks || []))].slice(0, 5);
+  let remaining = 3;
+  const ideas = cats.map((cat) => { const n = Math.min(remaining, cat.ideas?.length || 0); remaining -= n; return n ? labAtlasIdeas(cat, n) : ''; }).join('');
+  return labSec('🎓 Eğitim notları', r.edu.level ? 'Hedef düzey: ' + esc(labLevelName(r.edu.level)) : 'Fikrini pedagojik dayanak ve sınıfın koşullarıyla birlikte değerlendir.', '<div class="edu-notes"><div class="atlas-meta">' + chips + '</div>' + (evidence?.length ? labEvidence(evidence) : '') + (cats.length ? '<h4>Türkiye’ye uyarlarken</h4>' + cats.map((c) => '<p><b>' + esc(c.title) + ':</b> ' + esc(c.tr || '') + '</p>').join('') : '<p>MEB kazanım uyumunu ve öğretmen iş yükünü birlikte değerlendir; 1–2 öğretmenle iki haftalık bir sınıf pilotu planla.</p>') + (risks.length ? '<h4>Dikkat edilecekler</h4><ul class="atlas-risks">' + risks.map((risk) => '<li>' + esc(risk) + '</li>').join('') + '</ul>' : '<p>Çocuk verisi, KVKK, veli onayı ve üretilen içeriğin doğruluğunu pilot öncesinde ele al.</p>') + (ideas ? '<h4>Bu alanda deneyebileceğin fikirler</h4>' + ideas : '') + '</div>');
+}
+
 // ─── Olaylar ────────────────────────────────────────────────────────────
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-lab-go],[data-lab-chip],[data-lab-settings],[data-lab-savekeys],[data-lab-clearkeys],[data-lab-terms],[data-lab-rerun],[data-lab-claude],[data-lab-save],[data-lab-md],[data-lab-open],[data-lab-del],[data-lab-tz],[data-lab-retry]');
+  const t = e.target.closest('[data-lab-mode],[data-lab-atlas],[data-lab-category],[data-lab-level],[data-lab-idea],[data-lab-go],[data-lab-chip],[data-lab-settings],[data-lab-savekeys],[data-lab-clearkeys],[data-lab-terms],[data-lab-rerun],[data-lab-claude],[data-lab-save],[data-lab-md],[data-lab-open],[data-lab-del],[data-lab-tz],[data-lab-retry]');
   if (!t) return;
   const d = t.dataset;
   const res = S.labRes;
+  if (d.labMode !== undefined) {
+    labSetMode(d.labMode);
+    renderLabOut();
+    document.querySelectorAll('[data-lab-mode]').forEach((b) => { if (b.dataset.labMode === L.mode) b.focus({ preventScroll: true }); });
+    return;
+  }
+  if (d.labAtlas !== undefined || d.labCategory !== undefined) {
+    L.category = d.labCategory || '';
+    labSetMode('atlas');
+    if (S.view !== 'lab') setView('lab');
+    else renderLabOut();
+    labLoadAtlas();
+    requestAnimationFrame(() => {
+      const heading = $('#labOut [data-atlas-heading]');
+      heading?.focus({ preventScroll: true });
+      $('#labOut')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    return;
+  }
+  if (d.labLevel !== undefined) {
+    L.level = d.labLevel;
+    renderLabOut();
+    document.querySelectorAll('[data-lab-level]').forEach((b) => { if (b.dataset.labLevel === L.level) b.focus({ preventScroll: true }); });
+    return;
+  }
+  if (d.labIdea !== undefined) {
+    const cat = L.atlas?.categories.find((c) => c.id === d.labIdea);
+    const idea = cat?.ideas?.[Number(d.ideaIndex)];
+    if (idea?.query) return labRun(idea.query);
+    return;
+  }
   if (d.labGo !== undefined) return labRun($('#labIdea').value);
   if (d.labChip !== undefined) return labRun(LAB_EX[d.labChip]);
   if (d.labTz !== undefined) return labRun($('#tzIn').value);

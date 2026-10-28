@@ -5,11 +5,12 @@ const TABS = [
   { id: 'news', name: 'Haberler', color: 'var(--c-news)', cats: ['news', 'community'] },
   { id: 'apps', name: 'Uygulamalar', color: 'var(--c-apps)' },
   { id: 'ideas', name: 'Fikirler', color: 'var(--c-ideas)' },
+  { id: 'edu', name: 'Eğitim', color: 'var(--c-edu)', cats: ['edu'], tag: 'Eğitim' },
   { id: 'learn', name: 'Öğren', color: 'var(--c-learn)', cats: ['learn', 'research'] },
   { id: 'video', name: 'Videolar', color: 'var(--c-video)' },
   { id: 'tr', name: 'Türkçe', color: 'var(--c-tr)' },
 ];
-const CAT_NAME = { models: 'Modeller', news: 'Haber', community: 'Topluluk', apps: 'Uygulama', ideas: 'Fikir', learn: 'Öğren', research: 'Araştırma', video: 'Video', tr: 'Türkçe' };
+const CAT_NAME = { edu: 'Eğitim', models: 'Modeller', news: 'Haber', community: 'Topluluk', apps: 'Uygulama', ideas: 'Fikir', learn: 'Öğren', research: 'Araştırma', video: 'Video', tr: 'Türkçe' };
 const PAGE = 30;
 
 const store = {
@@ -178,7 +179,7 @@ async function load(silent) {
 function itemsForTab() {
   const tab = TABS.find((t) => t.id === S.tab);
   let items = S.data.items;
-  if (S.tab !== 'all') items = items.filter((i) => (tab.cats || [tab.id]).includes(i.cat));
+  if (S.tab !== 'all') items = items.filter((i) => (tab.cats || [tab.id]).includes(i.cat) || (tab.tag && (i.tags || []).includes(tab.tag)));
   if (S.range) items = items.filter((i) => Date.now() - i.date < S.range * 3600000);
   if (S.vlang && ['video', 'learn'].includes(S.tab)) items = items.filter((i) => (srcLang(i) === 'tr') === (S.vlang === 'tr'));
   if (S.q) {
@@ -202,7 +203,7 @@ function renderAll() {
   const labels = {};
   for (const t of TABS.slice(1)) {
     const cats = t.cats || [t.id];
-    labels[t.id] = { name: t.name, count: S.data.items.filter((i) => cats.includes(i.cat) && Date.now() - i.date < 86400000).length };
+    labels[t.id] = { name: t.name, count: S.data.items.filter((i) => (cats.includes(i.cat) || (t.tag && (i.tags || []).includes(t.tag))) && Date.now() - i.date < 86400000).length };
   }
   window.Globe?.setLabels(labels);
 }
@@ -303,9 +304,10 @@ function renderMain() {
   $('#vlang').hidden = !['video', 'learn'].includes(S.tab);
 
   let items = itemsForTab();
-  let html = '';
+  const banner = S.tab === 'edu' ? '<button class="edu-banner" data-lab-atlas>🎓 Eğitimde YZ Atlası’nı aç →</button>' : '';
+  let html = banner;
   if (!items.length) {
-    $('#feed').innerHTML = `<div class="empty">${S.q ? 'Aramana uygun haber bulunamadı.' : 'Bu aralıkta haber yok. “Hafta”yı seçmeyi dene.'}</div>`;
+    $('#feed').innerHTML = `${banner}<div class="empty">${S.q ? 'Aramana uygun haber bulunamadı.' : 'Bu aralıkta haber yok. “Hafta”yı seçmeyi dene.'}</div>`;
     return;
   }
   if (S.tab === 'video' && !S.q) {

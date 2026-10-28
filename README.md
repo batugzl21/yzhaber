@@ -38,7 +38,17 @@ Her şey tarayıcıda çalışır; sunucu ya da anahtar gerekmez. ⚙ ayarların
 - **Claude API anahtarı:** Akıllı modu açar. Bu modda sorguları ve sıralamayı Claude yapar.
 - **GitHub token'ı:** Dakikada 10 aramalık sınırı artırır.
 
-Anahtarlar yalnızca senin tarayıcında saklanır. Motor testleri: `node --test "test/*.test.js"`.
+Anahtarlar yalnızca senin tarayıcında saklanır.
+
+#### 🎓 Eğitimde YZ Atlası
+Fikir Lab'deki "Eğitimde YZ Atlası" düğmesiyle açılır. 13 kategoride (YZ öğretmeni, öğretmen asistanı, ölçme ve rubrik, aralıklı tekrar, LGS/YKS hazırlığı, okuma ve dil, STEM, kodlama, özel eğitim, öğrenme analitiği, LMS, veli iletişimi, YZ okuryazarlığı) şunlar var:
+- araştırma bulguları (RCT, meta-analiz, rapor)
+- fork'lanabilir GitHub repoları
+- kullanılan ürünler
+- Türkiye'ye uyarlama notları ve riskler
+- araştırmaya tek tıkla gönderilebilen somut fikirler
+
+Kaynak dosya `atlas/edu.json`. Repo yıldızları, lisansları ve güncellik bilgisi derleme sırasında günde bir yenilenir; elle yenilemek için `node server.js --atlas` çalıştır. Eğitimle ilgili fikirlerde araştırma motoru Türkçe eğitim terimlerini tanır, atlas repolarını sonuçlara ekler ve eğitimci sorularını da getirir. Sonuç sayfasında ayrıca bir "Eğitim notları" bölümü çıkar. Haber akışında da yeni bir **Eğitim** sekmesi var. Motor testleri: `node --test "test/*.test.js"`.
 
 | Sekme | İçerik |
 |---|---|
