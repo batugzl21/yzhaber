@@ -23,7 +23,7 @@ Not: GitHub, 60 gün boyunca hiç commit gelmeyen depolarda zamanlanmış görev
   - Benzer haberler
   - O haberden uygulama fikri çıkaran bir prompt
 - Kaynağa gitmek istersen "Kaynakta oku" düğmesi var. Site dışına giden her bağlantı önce onay ister.
-- Sağ panelde **en iyi modeller** sıralaması (LMArena) ve **Fikir Laboratuvarı** yer alır.
+- Sağ panelde **en iyi modeller** sıralaması (LMArena) ve **💡 Fikir Lab** yer alır.
 - Sağ üstteki simgeler: kaydedilen haberler ve kaynak rehberi.
 
 ### Fikir Lab
